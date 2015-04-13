@@ -301,19 +301,25 @@ func checkResponseStatus(res *http.Response) (err error) {
 // doPdf writes the pdf stream to outputWriter
 func (s *Service) doPdf(ctx context.Context, outputWriter io.Writer, method string, urlStr string, payload interface{}) error {
 	var body io.Reader = nil
-	var client *http.Client
-	var err error
 
-	if client, err = contextClient(ctx); err != nil {
+	client, err := contextClient(ctx)
+	if err != nil {
 		return err
 	}
 
 	if payload != nil {
-		b, err := json.Marshal(payload)
+		var b []byte
+		if LogRawRequest {
+			if b, err = json.MarshalIndent(payload, "", "    "); err == nil {
+				log.Printf("Request Body: %s", string(b))
+			}
+		} else {
+			b, err = json.Marshal(payload)
+		}
 		if err != nil {
 			return err
 		}
-		body = bytes.NewBuffer(b)
+		body = bytes.NewReader(b)
 	}
 
 	bUrl, ok := ctx.Value(APIEndpoint).(string)
@@ -332,7 +338,7 @@ func (s *Service) doPdf(ctx context.Context, outputWriter io.Writer, method stri
 	}
 	s.credential.Authorize(req)
 	resCh := make(chan error)
-	go func(ch chan<- error) {
+	go func() {
 		res, err := client.Do(req)
 		if err == nil {
 			if err = checkResponseStatus(res); err == nil {
@@ -340,8 +346,8 @@ func (s *Service) doPdf(ctx context.Context, outputWriter io.Writer, method stri
 				_, err = io.Copy(outputWriter, res.Body)
 			}
 		}
-		ch <- err
-	}(resCh)
+		resCh <- err
+	}()
 
 	select {
 	case <-ctx.Done():
@@ -356,11 +362,11 @@ func (s *Service) doPdf(ctx context.Context, outputWriter io.Writer, method stri
 
 // do returns the json response from a rest api call
 func (s *Service) do(ctx context.Context, method string, urlStr string, payload interface{}, returnValue interface{}, files ...UploadFile) error {
-	var err error
-	var client *http.Client
+
 	var body io.Reader = nil
 	var contentType string
-	if client, err = contextClient(ctx); err != nil {
+	client, err := contextClient(ctx)
+	if err != nil {
 		return err
 	}
 	if len(files) > 0 {
@@ -370,7 +376,7 @@ func (s *Service) do(ctx context.Context, method string, urlStr string, payload 
 		var b []byte
 		if LogRawRequest {
 			if b, err = json.MarshalIndent(payload, "", "    "); err == nil {
-				fmt.Printf("Request Body: %s", string(b))
+				log.Printf("Request Body: %s", string(b))
 			}
 		} else {
 			b, err = json.Marshal(payload)
@@ -405,26 +411,25 @@ func (s *Service) do(ctx context.Context, method string, urlStr string, payload 
 		log.Printf("RequestURL: %s", req.URL.String())
 	}
 	resCh := make(chan error)
-	go func(ch chan<- error) {
+	go func() {
 		res, err := client.Do(req)
 		if err == nil {
 			if err = checkResponseStatus(res); err == nil {
-				var rc io.Reader = res.Body
 				defer res.Body.Close()
 				if LogRawResponse {
-					if b, err := ioutil.ReadAll(rc); err != nil {
-						ch <- err
-						return
-					} else {
+					var b []byte
+					if b, err = ioutil.ReadAll(res.Body); err == nil {
 						log.Printf("%s", string(b))
-						rc = bytes.NewBuffer(b)
+						err = json.Unmarshal(b, returnValue)
 					}
+				} else {
+					err = json.NewDecoder(res.Body).Decode(returnValue)
 				}
-				err = json.NewDecoder(rc).Decode(returnValue)
 			}
 		}
-		ch <- err
-	}(resCh)
+		resCh <- err
+		close(resCh)
+	}()
 
 	select {
 	case <-ctx.Done():
