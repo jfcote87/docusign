@@ -94,7 +94,7 @@ func (o OauthCredential) Revoke(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return CheckResponse(res)
+	return checkResponseStatus(res)
 }
 
 // Config provides methods to authenticate via a user/password combination.  It may also
@@ -142,7 +142,7 @@ func (c *Config) OauthCredential(ctx context.Context) (*OauthCredential, error) 
 	}
 
 	defer res.Body.Close()
-	if err = CheckResponse(res); err != nil {
+	if err = checkResponseStatus(res); err != nil {
 		return nil, err
 	}
 	var tk *OauthCredential
@@ -242,8 +242,8 @@ func (r ResponseError) Error() string {
 
 // CheckErr looks at the response for a 200 or 201.  If not it will
 // decode the json into a Response Error.  Returns nil on  success.
-// https://www.docusign.com/p/RESTAPIGuide/RESTAPIGuide.htm#Error Code/Error Code Information.htm%3FTocPath%3DError%2520Code%2520Information%7C_____0
-func CheckResponse(res *http.Response) (err error) {
+// https://www.docusign.com/p/RESTAPIGuide/RESTAPIGuide.htm#Error Code/Error Code Information.htm
+/*func CheckResponse(res *http.Response) (err error) {
 	if res.StatusCode != 200 && res.StatusCode != 201 {
 		defer res.Body.Close()
 		re := &ResponseError{Status: res.StatusCode}
@@ -258,7 +258,7 @@ func CheckResponse(res *http.Response) (err error) {
 		}
 	}
 	return err
-}
+}*/
 
 // DsQueryTimeFormat returns a string in the correct format for a querystring format
 func DsQueryTimeFormat(t time.Time) string {
@@ -282,7 +282,9 @@ func createQueryString(args []NmVal) string {
 	return ""
 }
 
-// checkResponseStatus returns an error on an unsuccessful api call
+// checkResponseStatus looks at the response for a 200 or 201.  If not it will
+// decode the json into a Response Error.  Returns nil on  success.
+// https://www.docusign.com/p/RESTAPIGuide/RESTAPIGuide.htm#Error Code/Error Code Information.htm
 func checkResponseStatus(res *http.Response) (err error) {
 	if res.StatusCode != 200 && res.StatusCode != 201 {
 		re := &ResponseError{Status: res.StatusCode}
