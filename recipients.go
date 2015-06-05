@@ -4,8 +4,6 @@
 // license that can be found in the LICENSE file.
 package docusign
 
-import ()
-
 // RecipientList defines the recipients for an envelope
 // RestApi Documentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Recipient%20Parameter.htm
@@ -21,7 +19,7 @@ type RecipientList struct {
 }
 
 type EmailNotification struct {
-	EmailBody         string `json:"EmailBody,omitempty"`
+	EmailBody         string `json:"emailBody,omitempty"`
 	EmailSubject      string `json:"emailSubject,omitempty"`
 	SupportedLanguage string `json:"supportedLanguage,omitempty"`
 }
@@ -115,7 +113,7 @@ type Recipient struct {
 	TemplateAccessCodeRequired            DSBool               `json:"templateAccessCodeRequired,omitempty"`
 	TemplateLocked                        DSBool               `json:"templateLocked,omitempty"`
 	TemplateRequired                      DSBool               `json:"templateRequired,omitempty"`
-	ErrorDetails                          *ResponseError       `json:errorDetails,omitempty"`
+	ErrorDetails                          *ResponseError       `json:"errorDetails,omitempty"`
 }
 
 // EmailRecipient adds email field to base recipient structure

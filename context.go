@@ -43,16 +43,17 @@ func contextClient(ctx context.Context) (*http.Client, error) {
 
 // HTTPClient is the context key to use with golang.org/x/net/context's
 // WithValue function to associate an *http.Client value with a context.
-var HTTPClient contextKey
+var HTTPClient contextKey1
 
 // APIEndpoint is the context key to determine the endpoint (demo or live)
 // to use. If not set, the live version is assumed.
-var APIEndpoint contextKey
+var APIEndpoint contextKey2
 
 // contextKey is just an empty struct. It exists so HTTPClient can be
 // an immutable public variable with a unique type. It's immutable
 // because nobody else can create a contextKey, being unexported.
-type contextKey struct{}
+type contextKey1 struct{}
+type contextKey2 struct{}
 
 // DefaultCtx is the default context you should supply if not using
 // your own context.Context (see https://golang.org/x/net/context).

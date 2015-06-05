@@ -123,7 +123,6 @@ type Expiration struct {
 	ExpireWarn    string `json:"expireWarn,omitempty"`  // Number of days until warning
 }
 
-/*
 type BccEmail struct {
 	BccEmailAddressId string `json:"bccEmailAddressId,omitempty"`
 	Email             string `json:"email,omitempty"`
@@ -131,12 +130,12 @@ type BccEmail struct {
 
 type ServerTemplate struct {
 	Sequence   string `json:"sequence,omitempty"`
-	TemplateId string `json:"sequence,omitempty"`
+	TemplateId string `json:"templateId,omitempty"`
 }
 
 type InlineTemplate struct {
 	Sequence  string     `json:"sequence,omitempty"`
-	Documents []Document `json:"sequence,omitempty"`
+	Documents []Document `json:"documents,omitempty"`
 }
 type CompositeTemplate struct {
 	CompositeTemplateId         string           `json:"compositeTemplateId,omitempty"`
@@ -145,37 +144,37 @@ type CompositeTemplate struct {
 	PdfMetaDataTemplateSequence string           `json:"pdfMetaDataTemplateSequence,omitempty"`
 	Document                    []Document       `json:"document,omitempty"`
 }
-*/
 
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Send%20an%20Envelope.htm
 type Envelope struct {
-	Accessibility           string             `json:"accessibility,omitempty"`
-	AllowMarkup             string             `json:"allowMarkup,omitempty"`
-	AllowReassign           string             `json:"allowReassign,omitempty"`
-	AllowRecipientRecursion string             `json:"allowRecipientRecursion,omitempty"`
-	Asynchronous            string             `json:"asynchronous,omitempty"`
-	AuthoritativeCopy       string             `json:"authoritativeCopy,omitempty"`
-	AutoNavigation          string             `json:"autoNavigation,omitempty"`
-	BrandId                 string             `json:"brandId,omitempty"`
-	EmailBlurb              string             `json:"emailBlurb,omitempty"`
-	EmailSubject            string             `json:"emailSubject,omitempty"`
-	EnableWetSign           string             `json:"enableWetSign,omitempty"`
-	EnforceSignerVisibility string             `json:"enforceSignerVisibility,omitempty"`
-	EnvelopeIdStamping      string             `json:"envelopeIdStamping,omitempty"`
-	MessageLock             string             `json:"messageLock,omitempty"`
-	Notification            *Notification      `json:"notification,omitempty"`
-	RecipientsLock          string             `json:"recipientsLock,omitempty"`
-	SigningLocation         string             `json:"signingLocation,omitempty"`
-	Status                  string             `json:"status,omitempty"`
-	TransactionId           string             `json:"transactionId,omitempty"`
-	UseDisclosure           bool               `json:"useDisclosure,omitempty"`
-	CustomFields            *CustomFieldList   `json:"customFields,omitempty"`
-	Documents               []Document         `json:"documents,omitempty"`
-	Recipients              *RecipientList     `json:"recipients,omitempty"`
-	EventNotification       *EventNotification `json:"eventNotification,omitempty"`
-	EmailSettings           *EmailSetting      `json:"emailSettings,omitempty"`
-	TemplateId              string             `json:"templateId,omitempty"`
-	TempateRoles            []TemplateRole     `json:"tempateRoles,omitempty"`
+	Accessibility           string              `json:"accessibility,omitempty"`
+	AllowMarkup             string              `json:"allowMarkup,omitempty"`
+	AllowReassign           string              `json:"allowReassign,omitempty"`
+	AllowRecipientRecursion string              `json:"allowRecipientRecursion,omitempty"`
+	Asynchronous            string              `json:"asynchronous,omitempty"`
+	AuthoritativeCopy       string              `json:"authoritativeCopy,omitempty"`
+	AutoNavigation          string              `json:"autoNavigation,omitempty"`
+	BrandId                 string              `json:"brandId,omitempty"`
+	EmailBlurb              string              `json:"emailBlurb,omitempty"`
+	EmailSubject            string              `json:"emailSubject,omitempty"`
+	EnableWetSign           string              `json:"enableWetSign,omitempty"`
+	EnforceSignerVisibility string              `json:"enforceSignerVisibility,omitempty"`
+	EnvelopeIdStamping      string              `json:"envelopeIdStamping,omitempty"`
+	MessageLock             string              `json:"messageLock,omitempty"`
+	Notification            *Notification       `json:"notification,omitempty"`
+	RecipientsLock          string              `json:"recipientsLock,omitempty"`
+	SigningLocation         string              `json:"signingLocation,omitempty"`
+	Status                  string              `json:"status,omitempty"`
+	TransactionId           string              `json:"transactionId,omitempty"`
+	UseDisclosure           bool                `json:"useDisclosure,omitempty"`
+	CustomFields            *CustomFieldList    `json:"customFields,omitempty"`
+	Documents               []Document          `json:"documents,omitempty"`
+	Recipients              *RecipientList      `json:"recipients,omitempty"`
+	EventNotification       *EventNotification  `json:"eventNotification,omitempty"`
+	EmailSettings           *EmailSetting       `json:"emailSettings,omitempty"`
+	TemplateId              string              `json:"templateId,omitempty"`
+	TemplateRoles           []TemplateRole      `json:"templateRoles,omitempty"`
+	CompositeTemplates      []CompositeTemplate `json:"compositeTemplates,omitempty"`
 }
 
 type CustomFieldList struct {
@@ -399,7 +398,7 @@ type TemplateDefinition struct {
 	Description    string             `json:"description,omitempty"`
 	LastModified   time.Time          `json:"lastModified,omitempty"`
 	LastModifiedBy TemplateModifiedBy `json:"lastModifiedBy,omitempty"`
-	PageCount      string             `json:"pageCount,omitempty"`
+	PageCount      int                `json:"pageCount,omitempty"`
 	FolderName     string             `json:"folderName,omitempty"`
 	FolderId       string             `json:"folderId,omitempty"`
 	Owner          TemplateOwner      `json:"owner,omitempty"`

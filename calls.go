@@ -321,7 +321,7 @@ var LoginInformationSettingsNone = LoginInfoParam{Name: "login_settings", Value:
 // or sent.
 // RestApi Documentation
 //
-func (s *Service) EnvelopeCreate(ctx context.Context, env *Envelope, files ...UploadFile) (envResp *EnvelopeResponse, err error) {
+func (s *Service) EnvelopeCreate(ctx context.Context, env *Envelope, files ...*UploadFile) (envResp *EnvelopeResponse, err error) {
 	urlStr := ("envelopes")
 	err = s.do(ctx, "POST", urlStr, env, &envResp, files...)
 	return
@@ -410,7 +410,7 @@ func (s *Service) EnvelopeStatusMulti(ctx context.Context, envIds ...string) (re
 	return retVal.Envelopes, nil
 }
 
-func (s *Service) EnvelopeSetDocuments(ctx context.Context, envId string, dl *DocumentList, files ...UploadFile) (res *DocumentAssetList, err error) {
+func (s *Service) EnvelopeSetDocuments(ctx context.Context, envId string, dl *DocumentList, files ...*UploadFile) (res *DocumentAssetList, err error) {
 	urlStr := fmt.Sprintf("envelopes/%s/documents", envId)
 	err = s.do(ctx, "PUT", urlStr, dl, &res, files...)
 	return
@@ -735,5 +735,15 @@ func (s *Service) EnvelopeMove(ctx context.Context, toFolderId string, envIds ..
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Get List of Account Custom Fields.htm
 func (s *Service) AccountCustomFields(ctx context.Context) (res *CustomFieldList, err error) {
 	err = s.do(ctx, "GET", "custom_fields", nil, &res)
+	return
+}
+
+// GetTemplate returns field data for the specified template
+//
+// RestApiDocumentation
+// https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Get Template.htm
+func (s *Service) GetTemplate(ctx context.Context, id string) (res *Template, err error) {
+	urlStr := fmt.Sprintf("templates/%s", id)
+	err = s.do(ctx, "GET", urlStr, nil, &res)
 	return
 }

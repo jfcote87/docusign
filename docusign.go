@@ -167,23 +167,36 @@ func (c Config) Authorize(req *http.Request) {
 // Service contains all rest methods and stores authorization
 type Service struct {
 	accountId  string // Docusign account id
+	baseUrl    string
 	credential Credential
+	endpoint   string
+	client     *http.Client
+	ctx        context.Context
 }
 
 // New intializes a new rest api service.  If client is nil then
 // http.DefaultClient is assumed.
 func New(accountId string, credential Credential) *Service {
+	var ctx context.Context
+	endpoint, ok := ctx.Value(APIEndpoint).(string)
+	if !ok {
+		endpoint = liveUrl
+	}
+	cl, _ := contextClient(ctx)
 	return &Service{
-		//client: client,
+		//	ctx:        ctx,
+		client:     cl,
 		accountId:  fmt.Sprintf("accounts/%s/", accountId),
 		credential: credential,
-		//		baseUrl:    fmt.Sprintf("%s/accounts/%s/", baseUrl, accountId),
+		endpoint:   endpoint,
+		baseUrl:    fmt.Sprintf("%s/accounts/%s/", baseUrl, accountId),
 	}
 }
 
 // UseDemoServer changes tht DefaultCtx so that calls are made to Docusign's demo server.
-func UseDemoServer() {
+func UseDemoServer() context.Context {
 	DefaultCtx = context.WithValue(context.Background(), APIEndpoint, testUrl)
+	return DefaultCtx
 }
 
 func UseProductionServer() {
@@ -363,7 +376,7 @@ func (s *Service) doPdf(ctx context.Context, outputWriter io.Writer, method stri
 }
 
 // do returns the json response from a rest api call
-func (s *Service) do(ctx context.Context, method string, urlStr string, payload interface{}, returnValue interface{}, files ...UploadFile) error {
+func (s *Service) do(ctx context.Context, method string, urlStr string, payload interface{}, returnValue interface{}, files ...*UploadFile) error {
 
 	var body io.Reader = nil
 	var contentType string
@@ -411,6 +424,10 @@ func (s *Service) do(ctx context.Context, method string, urlStr string, payload 
 	s.credential.Authorize(req)
 	if LogRawRequest {
 		log.Printf("RequestURL: %s", req.URL.String())
+		for k, v := range req.Header {
+			log.Printf("%s: %v\n", k, v)
+		}
+
 	}
 	resCh := make(chan error)
 	go func() {
@@ -448,7 +465,7 @@ type canceler interface {
 	CancelRequest(*http.Request)
 }
 
-func multiBody(payload interface{}, files []UploadFile) (io.Reader, string) {
+func multiBody(payload interface{}, files []*UploadFile) (io.Reader, string) {
 	pr, pw := io.Pipe()
 	mpw := multipart.NewWriter(pw)
 	// write json payload first

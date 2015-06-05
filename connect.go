@@ -1,8 +1,19 @@
 package docusign
 
 import (
+	"strings"
 	"time"
 )
+
+type DSTime string
+
+func (d DSTime) Time() (time.Time, error) {
+	if strings.HasSuffix(string(d), "Z") {
+		return time.Parse(time.RFC3339Nano, string(d))
+
+	}
+	return time.Parse("2006-01-02T15:04:05.999999999", string(d))
+}
 
 type DocuSignEnvelopeInformation struct {
 	EnvelopeStatus EnvelopeStatusXml `xml:"EnvelopeStatus" json:"envelopeStatus,omitempty"`
@@ -10,17 +21,17 @@ type DocuSignEnvelopeInformation struct {
 }
 
 type EnvelopeStatusXml struct {
-	TimeGenerated      time.Time            `xml:"TimeGenerated" json:"timeGenerated,omitempty"`
+	TimeGenerated      DSTime               `xml:"TimeGenerated" json:"timeGenerated,omitempty"`
 	EnvelopeID         string               `xml:"EnvelopeID" json:"envelopeID,omitempty"`
 	Subject            string               `xml:"Subject" json:"subject,omitempty"`
 	UserName           string               `xml:"UserName" json:"userName,omitempty"`
 	Email              string               `xml:"Email" json:"email,omitempty"`
-	Status             time.Time            `xml:"Status" json:"status,omitempty"`
-	Created            time.Time            `xml:"Created" json:"created,omitempty`
-	Sent               time.Time            `xml:"Sent" json:"sent,omitempty"`
-	Delivered          time.Time            `xml:"Delivered" json:"delivered,omitempty"`
-	Signed             time.Time            `xml:"Signed" json:"signed,omitempty"`
-	Completed          time.Time            `xml:"Completed" json:"completed,omitempty"`
+	Status             string               `xml:"Status" json:"status,omitempty"`
+	Created            DSTime               `xml:"Created" json:"created,omitempty`
+	Sent               DSTime               `xml:"Sent" json:"sent,omitempty"`
+	Delivered          DSTime               `xml:"Delivered" json:"delivered,omitempty"`
+	Signed             DSTime               `xml:"Signed" json:"signed,omitempty"`
+	Completed          DSTime               `xml:"Completed" json:"completed,omitempty"`
 	ACStatus           string               `xml:"ACStatus" json:"acStatus,omitempty"`
 	ACStatusDate       string               `xml:"ACStatusDate" json:"acStatusDate,omitempty"`
 	ACHolder           string               `xml:"ACHolder" json:"acHolder,omitempty"`
@@ -28,7 +39,7 @@ type EnvelopeStatusXml struct {
 	ACHolderLocation   string               `xml:"ACHolderLocation" json:"acHolderLocation,omitempty"`
 	SigningLocation    string               `xml:"SigningLocation" json:"signingLocation,omitempty"`
 	SenderIPAddress    string               `xml:"SenderIPAddress" json:"senderIPAddress,omitempty"`
-	EnvelopePDFHash    bool                 `xml:"EnvelopePDFHash" json:"envelopePDFHash,omitempty"`
+	EnvelopePDFHash    string               `xml:"EnvelopePDFHash" json:"envelopePDFHash,omitempty"`
 	AutoNavigation     bool                 `xml:"AutoNavigation" json:"autoNavigation,omitempty"`
 	EnvelopeIdStamping bool                 `xml:"EnvelopeIdStamping" json:"envelopeIdStamping,omitempty"`
 	AuthoritativeCopy  bool                 `xml:"AuthoritativeCopy" json:"authoritativeCopy,omitempty"`
@@ -47,9 +58,9 @@ type RecipientStatusXml struct {
 	Email               string                 `xml:"Email" json:"email,omitempty"`
 	UserName            string                 `xml:"UserName" json:"userName,omitempty"`
 	RoutingOrder        string                 `xml:"RoutingOrder" json:"routingOrder,omitempty"`
-	Sent                time.Time              `xml:"Sent" json:"sent,omitempty"`
-	Delivered           time.Time              `xml:"Delivered" json:"delivered,omitempty"`
-	Signed              time.Time              `xml:"Signed" json:"signed,omitempty"`
+	Sent                DSTime                 `xml:"Sent" json:"sent,omitempty"`
+	Delivered           DSTime                 `xml:"Delivered" json:"delivered,omitempty"`
+	Signed              DSTime                 `xml:"Signed" json:"signed,omitempty"`
 	DeclineReason       string                 `xml:"DeclineReason" json:"declineReason,omitempty"`
 	Status              string                 `xml:"Status" json:"status,omitempty"`
 	RecipientIPAddress  string                 `xml:"RecipientIPAddress" json:"recipientIPAdress,omitempty"`

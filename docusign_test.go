@@ -27,22 +27,62 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net/http"
 	"os"
 	"testing"
 	"time"
+
+	"golang.org/x/net/context"
 )
 
+type InviteData struct {
+	ConfName       string `json:"confName" xml:"ConfName" ds:"txtConfName,Fellow"`
+	Location       string `json:"location" xml:"Location" ds:"txtLocation,Fellow"`
+	ConfDate       string `json:"confDate" xml:"ConfDate" ds:"txtConfDate,Fellow"`
+	Pid            int    `json:"pid" xml:"Pid" ds:"-"`
+	Prefix         string `json:"prefix" xml:"Prefix" ds:"txtPrefix,Conferee"`
+	LastName       string `json:"lName" xml:"LName" ds:"txtLName,Conferee"`
+	FirstName      string `json:"fName" xml:"FName" ds:"txtFName,Conferee"`
+	Middle         string `json:"middle" xml:"Middle" ds:"txtMiddle,Conferee"`
+	Suffix         string `json:"suffix" xml:"Suffix" ds:"txtSuffix,Conferee"`
+	Email          string `json:"email" xml:"Email" ds:"txtEmail,Conferee,email"`
+	Aff            string `json:"aff" xml:"Aff" ds:"txtAff,Conferee"`
+	AffTitle       string `json:"affTitle" xml:"AffTitle" ds:"txtAffTitle,Conferee"`
+	HomeAddr       string `json:"homeAddr" xml:"HomeAddr" ds:"txtHomeAddr,Conferee"`
+	HomePhone      string `json:"homePhone" xml:"HomePhone" ds:"txtHomePhone,Conferee"`
+	HomeFax        string `json:"homeFax" xml:"HomeFax" ds:"txtHomeFax,Conferee"`
+	BusAddr        string `json:"busAddr" xml:"BusAddr" ds:"txtBusAddr,Conferee"`
+	BusPhone       string `json:"busPhone" xml:"BusPhone" ds:"txtBusPhone,Conferee"`
+	BusFax         string `json:"busFax" xml:"BusFax" ds:"txtBusFax,Conferee"`
+	Correspondence string `json:"correspondence" xml:"Correspondence" ds:"txtCorrespondence,Conferee,dl"`
+	ConfereeList   string `json:"confereeList" xml:"ConfereeList" ds:"txtConfereeList,Conferee,dl"`
+	Payment        string `json:"payment" xml:"Payment" ds:"txtPayment,Conferee,dl"`
+	ListEmail      string `json:"listEmail" xml:"ListEmail" ds:"txtListEmail,Conferee,email"`
+	TableTent      string `json:"TableTent" xml:"TableTent" ds:"txtTableTent,Conferee"`
+	Diet           string `json:"diet" xml:"Diet" ds:"txtDiet,Conferee"`
+	Hotel          string `json:"hotel" xml:"Hotel" ds:"txtHotel,Conferee"`
+	AnythingElse   string `json:"anythingElse" xml:"AnythingElse" ds:"txtAnythingElse,Conferee"`
+	Govt           string `json:"govt" xml:"Govt" ds:"rbUSCit,Conferee,rb"`
+	Country        string `json:"country" xml:"Country" ds:"txtCountry,Conferee"`
+	SSN            bool   `json:"ssn" xml:"SSN" ds:"cbSSN,Conferee,cb"`
+}
+
 var testEnvId = "04885769-590b-4412-8c4e-a527b4da1925"
+var testTemplateId = "6b000a67-42cb-4d9a-820a-afa19c0e43cf"
 
 func TestMain(m *testing.M) {
-	UseDemoServer()
+	//LogRawResponse = true
 
+	UseDemoServer()
+	DefaultCtx = context.WithValue(DefaultCtx, HTTPClient, http.DefaultClient)
 	os.Exit(m.Run())
 }
 
-//OAuthToken JcHuZrFH4uLc9vP3w3yooe8ItF0=
 func TestCalls(t *testing.T) {
+	t.Skip()
 	var cfg *Config
+	ctx := DefaultCtx
+
 	testConfigString := os.Getenv("DOCUSIGN_CONFIG")
 
 	err := json.Unmarshal([]byte(testConfigString), &cfg)
@@ -50,13 +90,16 @@ func TestCalls(t *testing.T) {
 		t.Errorf("Unable to unmarshal DOCUSIGN_CONFIG: %v", err)
 		return
 	}
+
 	if cfg.UserName == "" || cfg.Password == "" || cfg.IntegratorKey == "" || cfg.AccountId == "" {
 		t.Errorf("Invalid Config")
 		return
 
 	}
+
 	testToken := os.Getenv("DOCUSIGN_TOKEN")
 	var c *OauthCredential
+
 	if testToken > "" {
 		c = &OauthCredential{AccessToken: testToken}
 	} else {
@@ -65,7 +108,7 @@ func TestCalls(t *testing.T) {
 			t.Errorf("Ouauth2 token fail: %v", err)
 			return
 		}
-		fmt.Printf("Token: %s\n", c.AccessToken)
+		t.Logf("Token: %s\n", c.AccessToken)
 		defer func() {
 			if err := c.Revoke(DefaultCtx); err != nil {
 				t.Errorf("Revoke token failed: %v", err)
@@ -73,6 +116,22 @@ func TestCalls(t *testing.T) {
 		}()
 	}
 	sv := New(cfg.AccountId, c)
+
+	_, err = sv.GetTemplate(ctx, testTemplateId)
+	if err != nil {
+		t.Errorf("GetTemplate: %v", err)
+		return
+	}
+
+	r, err := sv.TemplateSearch(DefaultCtx)
+	if err != nil {
+		t.Errorf("TemplateSearch: %v", err)
+		return
+	}
+
+	for _, et := range r.EnvelopeTemplates {
+		t.Logf("%s %s", et.TemplateId, et.Name)
+	}
 
 	// Get Draft Folder
 	//LogRawRequest = true
@@ -93,7 +152,6 @@ func TestCalls(t *testing.T) {
 		return
 	}
 
-	LogRawResponse = true
 	_, err = sv.AccountCustomFields(DefaultCtx)
 	if err != nil {
 		t.Errorf("AccountCustomFields error: %v", err)
@@ -127,16 +185,14 @@ func TestCalls(t *testing.T) {
 		t.Errorf("Unable to open TestDocument.pdf: %v", err)
 	}
 	defer file.Close()
-	u := []UploadFile{
-		UploadFile{
-			ContentType: "application/pdf",
-			FileName:    "TestData.pdf",
-			Id:          "1",
-			Data:        file,
-		},
+	u := &UploadFile{
+		ContentType: "application/pdf",
+		FileName:    "TestData.pdf",
+		Id:          "1",
+		Data:        file,
 	}
 
-	ex, err := sv.EnvelopeCreate(DefaultCtx, testEnv, u[0])
+	ex, err := sv.EnvelopeCreate(DefaultCtx, testEnv, u)
 	if err != nil {
 		t.Errorf("CreateEnvelope: %v", err)
 		return
@@ -225,7 +281,6 @@ func TestCalls(t *testing.T) {
 		mTabs.ListTabs[0].ListItems[i].Selected = xval
 	}
 	mTabs.ListTabs[0].Value = "Y Val"
-	LogRawResponse = true
 	mTabs, err = sv.RecipientTabsModify(DefaultCtx, testEnvId, "2", mTabs)
 	if err != nil {
 		t.Errorf("Modify Tabs Error: %v", err)
@@ -235,7 +290,6 @@ func TestCalls(t *testing.T) {
 		t.Errorf("Wanted INVALID_TAB_OPERATION on TextTab[0]; got nil")
 		return
 	}
-	LogRawResponse = false
 
 	rTabs := &Tabs{
 		TextTabs: []TextTab{
@@ -297,7 +351,6 @@ func TestCalls(t *testing.T) {
 			newRecipients.Signers[i].Name = "Modified Name"
 		}
 	}
-	LogRawResponse = true
 	modRec, err := sv.RecipientsModify(DefaultCtx, testEnvId, newRecipients)
 	if err != nil {
 		t.Errorf("Recipients Modify Error: %v", err)
@@ -579,7 +632,7 @@ func testEnvelopePayload(userName string) *Envelope {
 		CustomFields: &CustomFieldList{
 			TextCustomFields: []CustomField{
 				CustomField{Name: "PID", Value: "123456"},
-				CustomField{Name: "Project", Value: "P1", Show: "true"},
+				CustomField{Name: "Project", Value: "P1"},
 			},
 		},
 		Documents: []Document{
@@ -868,10 +921,10 @@ func TestMultiBody(t *testing.T) {
 	}
 	payload.A = "A"
 	payload.B = 999
-	files := []UploadFile{
-		UploadFile{Data: newReadCloser("XXXX"), ContentType: "text/plain", FileName: "fn1", Id: "1"},
-		UploadFile{Data: newReadCloser("XXXX"), ContentType: "text/plain", FileName: "fn2", Id: "2"},
-		UploadFile{Data: newReadCloser("XXXX"), ContentType: "text/plain", FileName: "fn3", Id: "3"},
+	files := []*UploadFile{
+		&UploadFile{Data: newReadCloser("XXXX"), ContentType: "text/plain", FileName: "fn1", Id: "1"},
+		&UploadFile{Data: newReadCloser("XXXX"), ContentType: "text/plain", FileName: "fn2", Id: "2"},
+		&UploadFile{Data: newReadCloser("XXXX"), ContentType: "text/plain", FileName: "fn3", Id: "3"},
 	}
 	r, ct := multiBody(payload, files)
 
