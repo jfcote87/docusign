@@ -6,6 +6,7 @@
 // connect.go contains definitions for Docusign's Connect
 // Service.
 // see https://www.docusign.com/developer-center/explore/connect
+
 package docusign
 
 import (
