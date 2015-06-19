@@ -14,11 +14,11 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
 	"net/url"
+	"strings"
 	"time"
 
 	"golang.org/x/net/context"
@@ -27,16 +27,8 @@ import (
 const (
 	Version   = "0.5"
 	userAgent = "docusign-api-go-client/" + Version
-	liveUrl   = "https://www.docusign.net/restapi/v2/"
-	testUrl   = "https://demo.docusign.net/restapi/v2/"
-)
-
-var (
-	baseUrl string = testUrl
-
-	// LogRawResponse will copy all api responses to log, if true
-	LogRawResponse bool = false
-	LogRawRequest  bool = false
+	liveUrl   = "https://www.docusign.net/restapi/v2"
+	testUrl   = "https://demo.docusign.net/restapi/v2"
 )
 
 // DSBool is used to fix problem of capitalized DSBooleans in json. Unmarshals
@@ -50,7 +42,10 @@ func (d *DSBool) UnmarshalJSON(b []byte) error {
 
 // Credential add an authorization header(s) for a rest http request
 type Credential interface {
+	// Authorize attaches an authorization header to a request.
 	Authorize(*http.Request)
+	// AccountPath returns the url path fragment for the credenials account.
+	AccountPath() string
 }
 
 // OauthCredential provides authorization for rest request via
@@ -63,7 +58,9 @@ type OauthCredential struct {
 	TokenType   string `json:"token_type,omitempty"`
 	// Used to set X-DocuSign-Act-As-User header if non-empty
 	OnBehalfOfUser string `json:"onBehalf,omitempty"`
-	AccountId      string `json:"account_id,omitempty"`
+	// The docusign account used by the login user.  This may be
+	// found using the LoginInformation call.
+	AccountId string `json:"account_id,omitempty"`
 }
 
 // Authorize update request with authorization parameters
@@ -75,22 +72,25 @@ func (o OauthCredential) Authorize(req *http.Request) {
 	return
 }
 
+// AccountPath returns the path fragment for the account
+// associated with the credential.
+func (o OauthCredential) AccountPath() string {
+	return "/accounts/" + o.AccountId + "/"
+}
+
 // Revoke invalidates the token ensuring that an error will occur on an subsequent uses.
 func (o OauthCredential) Revoke(ctx context.Context) error {
-	client, err := contextClient(ctx)
-	if err != nil {
-		return err
-	}
+	settings := contextSettings(ctx)
 	v := url.Values{
 		"token": {o.AccessToken},
 	}
-	req, err := http.NewRequest("POST", baseUrl+"oauth2/revoke", bytes.NewBufferString(v.Encode()))
+	req, err := http.NewRequest("POST", settings.Endpoint+"/oauth2/revoke", bytes.NewBufferString(v.Encode()))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	res, err := client.Do(req)
+	res, err := settings.Client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -114,11 +114,8 @@ type Config struct {
 // token does not have a expiration although it may be revoked
 // via
 func (c *Config) OauthCredential(ctx context.Context) (*OauthCredential, error) {
-	client, err := contextClient(ctx)
-	if err != nil {
-		return nil, err
-	}
-
+	//client := contextClient(ctx)
+	settings := contextSettings(ctx)
 	v := url.Values{
 		"grant_type": []string{"password"},
 		"client_id":  []string{c.IntegratorKey},
@@ -126,17 +123,48 @@ func (c *Config) OauthCredential(ctx context.Context) (*OauthCredential, error) 
 		"password":   []string{c.Password},
 		"scope":      []string{"api"},
 	}
-	req, err := http.NewRequest("POST", baseUrl+"oauth2/token", bytes.NewBufferString(v.Encode()))
+	req, err := http.NewRequest("POST", settings.Endpoint+"/oauth2/token", bytes.NewBufferString(v.Encode()))
 	if err != nil {
 		return nil, err
 	}
 
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	if client == nil {
-		client = http.DefaultClient
+
+	res, err := settings.Client.Do(req)
+	if err != nil {
+		return nil, err
 	}
-	res, err := client.Do(req)
+
+	defer res.Body.Close()
+	if err = checkResponseStatus(res); err != nil {
+		return nil, err
+	}
+	var tk *OauthCredential
+	err = json.NewDecoder(res.Body).Decode(&tk)
+	return tk, err
+}
+
+// OauthCredentialOnBehalfOf returns an *OauthCredential for the user name specied by nm.  oauthCred
+// must be a credential for a user with administrative rights on the account.
+func (c *Config) OauthCredentialOnBehalfOf(ctx context.Context, oauthCred OauthCredential, nm string) (*OauthCredential, error) {
+	settings := contextSettings(ctx)
+	v := url.Values{
+		"grant_type": []string{"password"},
+		"client_id":  []string{c.IntegratorKey},
+		"username":   []string{nm},
+		"scope":      []string{"api"},
+	}
+	req, err := http.NewRequest("POST", settings.Endpoint+"/oauth2/token", bytes.NewBufferString(v.Encode()))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	oauthCred.Authorize(req)
+
+	res, err := settings.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -164,43 +192,58 @@ func (c Config) Authorize(req *http.Request) {
 	return
 }
 
+// Account path returns the account fragment
+func (c Config) AccountPath() string {
+	return "/accounts/" + c.AccountId + "/"
+}
+
 // Service contains all rest methods and stores authorization
 type Service struct {
 	accountId  string // Docusign account id
-	baseUrl    string
-	credential Credential
 	endpoint   string
+	credential Credential
 	client     *http.Client
 	ctx        context.Context
+	// logRawRequest and logRawResponse are used to capture the
+	// json serialization for a call.  The string argument will
+	// be a printf style string.
+	logRawRequest  func(context.Context, string, ...interface{})
+	logRawResponse func(context.Context, string, ...interface{})
 }
 
 // New intializes a new rest api service.  If client is nil then
 // http.DefaultClient is assumed.
-func New(accountId string, credential Credential) *Service {
-	var ctx context.Context
-	endpoint, ok := ctx.Value(APIEndpoint).(string)
-	if !ok {
-		endpoint = liveUrl
-	}
-	cl, _ := contextClient(ctx)
+//func New(ctx context.Context, accountId string, credential Credential) *Service {
+func New(ctx context.Context, credential Credential) *Service {
+	settings := contextSettings(ctx)
 	return &Service{
-		//	ctx:        ctx,
-		client:     cl,
-		accountId:  fmt.Sprintf("accounts/%s/", accountId),
-		credential: credential,
-		endpoint:   endpoint,
-		baseUrl:    fmt.Sprintf("%s/accounts/%s/", baseUrl, accountId),
+		ctx:            ctx,
+		client:         settings.Client,
+		credential:     credential,
+		endpoint:       settings.Endpoint, //fmt.Sprintf("%s/accounts/%s/", settings.Endpoint, accountId),
+		logRawRequest:  settings.LogRawRequest,
+		logRawResponse: settings.LogRawResponse,
 	}
 }
 
-// UseDemoServer changes tht DefaultCtx so that calls are made to Docusign's demo server.
-func UseDemoServer() context.Context {
-	DefaultCtx = context.WithValue(context.Background(), APIEndpoint, testUrl)
-	return DefaultCtx
+func (s Service) newRequest(method, urlStr string, body io.Reader) (*http.Request, error) {
+	var u string
+	if strings.HasPrefix(urlStr, "/") {
+		u = s.endpoint + urlStr
+	} else {
+		u = s.endpoint + s.credential.AccountPath() + urlStr
+	}
+	return http.NewRequest(method, u, body)
 }
 
-func UseProductionServer() {
-	DefaultCtx = context.Background()
+// UseDemoServer returns a Context that ensures that calls are made to Docusign's demo server.
+func UseDemoServer(logRequest, logResponse func(context.Context, string, ...interface{})) context.Context {
+	demoSettings := &ContextSetting{
+		Endpoint:       testUrl,
+		LogRawRequest:  logRequest,
+		LogRawResponse: logResponse,
+	}
+	return context.WithValue(context.Background(), APISettings, demoSettings)
 }
 
 // Upload file describes an a document attachment for uploading
@@ -219,8 +262,8 @@ type UploadFile struct {
 
 // NmVal is a generic name value pair struct used throughout the api.
 type NmVal struct {
-	Name  string `json:"name,omitempty"`
-	Value string `json:"value,omitempty"`
+	Name  string `json:"name,omitempty" xml:"name,attr"`
+	Value string `json:"value,omitempty" xml:",chardata"`
 }
 
 // ResponseError is generated when docusign returns an http error.
@@ -252,26 +295,6 @@ func (r *ResponseError) UnmarshalJSON(b []byte) error {
 func (r ResponseError) Error() string {
 	return fmt.Sprintf("Status: %d  %s: %s", r.Status, r.Err, r.Description)
 }
-
-// CheckErr looks at the response for a 200 or 201.  If not it will
-// decode the json into a Response Error.  Returns nil on  success.
-// https://www.docusign.com/p/RESTAPIGuide/RESTAPIGuide.htm#Error Code/Error Code Information.htm
-/*func CheckResponse(res *http.Response) (err error) {
-	if res.StatusCode != 200 && res.StatusCode != 201 {
-		defer res.Body.Close()
-		re := &ResponseError{Status: res.StatusCode}
-		bx := bytes.NewBuffer(make([]byte, 0))
-		io.Copy(bx, res.Body)
-		b2 := bytes.NewBuffer(bx.Bytes())
-		log.Printf("Error Msg: %d %s", res.ContentLength, string(bx.Bytes()))
-
-		err = json.NewDecoder(b2).Decode(&re)
-		if err == nil {
-			err = re
-		}
-	}
-	return err
-}*/
 
 // DsQueryTimeFormat returns a string in the correct format for a querystring format
 func DsQueryTimeFormat(t time.Time) string {
@@ -313,20 +336,16 @@ func checkResponseStatus(res *http.Response) (err error) {
 	return
 }
 
-// doPdf writes the pdf stream to outputWriter
-func (s *Service) doPdf(ctx context.Context, outputWriter io.Writer, method string, urlStr string, payload interface{}) error {
+// doPdf writes the pdf stream to the provided outputWriter.
+func (s *Service) doPdf(outputWriter io.Writer, method string, urlStr string, payload interface{}) error {
 	var body io.Reader = nil
-
-	client, err := contextClient(ctx)
-	if err != nil {
-		return err
-	}
+	var err error
 
 	if payload != nil {
 		var b []byte
-		if LogRawRequest {
+		if s.logRawRequest != nil {
 			if b, err = json.MarshalIndent(payload, "", "    "); err == nil {
-				log.Printf("Request Body: %s", string(b))
+				s.logRawRequest(s.ctx, "Request Body: %s", string(b))
 			}
 		} else {
 			b, err = json.Marshal(payload)
@@ -337,11 +356,7 @@ func (s *Service) doPdf(ctx context.Context, outputWriter io.Writer, method stri
 		body = bytes.NewReader(b)
 	}
 
-	bUrl, ok := ctx.Value(APIEndpoint).(string)
-	if !ok {
-		bUrl = liveUrl
-	}
-	req, err := http.NewRequest(method, bUrl+s.accountId+urlStr, body)
+	req, err := s.newRequest(method, urlStr, body) //http.NewRequest(method, s.endpoint+urlStr, body)
 	if err != nil {
 		return err
 	}
@@ -352,9 +367,10 @@ func (s *Service) doPdf(ctx context.Context, outputWriter io.Writer, method stri
 		req.Header.Add("Content-Type", "application/json")
 	}
 	s.credential.Authorize(req)
+
 	resCh := make(chan error)
 	go func() {
-		res, err := client.Do(req)
+		res, err := s.client.Do(req)
 		if err == nil {
 			if err = checkResponseStatus(res); err == nil {
 				defer res.Body.Close()
@@ -365,9 +381,9 @@ func (s *Service) doPdf(ctx context.Context, outputWriter io.Writer, method stri
 	}()
 
 	select {
-	case <-ctx.Done():
-		err = ctx.Err()
-		if t, ok := client.Transport.(canceler); ok {
+	case <-s.ctx.Done():
+		err = s.ctx.Err()
+		if t, ok := s.client.Transport.(canceler); ok {
 			t.CancelRequest(req)
 		}
 	case err = <-resCh:
@@ -376,22 +392,19 @@ func (s *Service) doPdf(ctx context.Context, outputWriter io.Writer, method stri
 }
 
 // do returns the json response from a rest api call
-func (s *Service) do(ctx context.Context, method string, urlStr string, payload interface{}, returnValue interface{}, files ...*UploadFile) error {
+func (s *Service) do(method string, urlStr string, payload interface{}, returnValue interface{}, files ...*UploadFile) error {
 
 	var body io.Reader = nil
 	var contentType string
-	client, err := contextClient(ctx)
-	if err != nil {
-		return err
-	}
+	var err error
 	if len(files) > 0 {
 		body, contentType = multiBody(payload, files)
 	} else if payload != nil {
 		// Prepare body
 		var b []byte
-		if LogRawRequest {
+		if s.logRawRequest != nil {
 			if b, err = json.MarshalIndent(payload, "", "    "); err == nil {
-				log.Printf("Request Body: %s", string(b))
+				s.logRawRequest(s.ctx, "Request Body: %s", string(b))
 			}
 		} else {
 			b, err = json.Marshal(payload)
@@ -405,11 +418,7 @@ func (s *Service) do(ctx context.Context, method string, urlStr string, payload 
 		return err
 	}
 
-	bUrl, ok := ctx.Value(APIEndpoint).(string)
-	if !ok {
-		bUrl = liveUrl
-	}
-	req, err := http.NewRequest(method, bUrl+s.accountId+urlStr, body)
+	req, err := s.newRequest(method, urlStr, body) //http.NewRequest(method, s.endpoint+urlStr, body)
 	if err != nil {
 		return err
 	}
@@ -422,23 +431,23 @@ func (s *Service) do(ctx context.Context, method string, urlStr string, payload 
 		req.Header.Set("Content-Type", contentType)
 	}
 	s.credential.Authorize(req)
-	if LogRawRequest {
-		log.Printf("RequestURL: %s", req.URL.String())
+	if s.logRawRequest != nil {
+		s.logRawRequest(s.ctx, "RequestURL: %s", req.URL.String())
 		for k, v := range req.Header {
-			log.Printf("%s: %v\n", k, v)
+			s.logRawRequest(s.ctx, "%s: %v\n", k, v)
 		}
 
 	}
 	resCh := make(chan error)
 	go func() {
-		res, err := client.Do(req)
+		res, err := s.client.Do(req)
 		if err == nil {
 			if err = checkResponseStatus(res); err == nil {
 				defer res.Body.Close()
-				if LogRawResponse {
+				if s.logRawResponse != nil {
 					var b []byte
 					if b, err = ioutil.ReadAll(res.Body); err == nil {
-						log.Printf("%s", string(b))
+						s.logRawResponse(s.ctx, "%s", string(b))
 						err = json.Unmarshal(b, returnValue)
 					}
 				} else {
@@ -451,9 +460,9 @@ func (s *Service) do(ctx context.Context, method string, urlStr string, payload 
 	}()
 
 	select {
-	case <-ctx.Done():
-		err = ctx.Err()
-		if t, ok := client.Transport.(canceler); ok {
+	case <-s.ctx.Done():
+		err = s.ctx.Err()
+		if t, ok := s.client.Transport.(canceler); ok {
 			t.CancelRequest(req)
 		}
 	case err = <-resCh:
@@ -465,6 +474,7 @@ type canceler interface {
 	CancelRequest(*http.Request)
 }
 
+// multiBody is used to format calls containing files.
 func multiBody(payload interface{}, files []*UploadFile) (io.Reader, string) {
 	pr, pw := io.Pipe()
 	mpw := multipart.NewWriter(pw)

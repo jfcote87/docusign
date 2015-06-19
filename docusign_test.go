@@ -7,12 +7,15 @@
 // rest api. Api documentation may be found at:
 // https://www.docusign.com/p/RESTAPIGuide/RESTAPIGuide.htm
 
-// You must define an environment variable name DOCSUSIGN_CONFIG for the
-// test to run properly.  The variable must be a json representation of a
-// Config struct that provides the api key, user name, password and account id.
-// An example is shown below:
+// You must define an environment variables for the test to run properly.
+// The necessary variables are:
+//	DOCUSIGN_USERNAME=XXXXXXXXXX
+//	DOCUSIGN_PASSWORD=XXXXXXXXXXx
+//	DOCUSIGN_ACCTID=XXXXXX
+//	DOCUSING_INT_KEY=XXXX-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
+//	DOCUSIGN_TESTENVID=XXXXXXXXX
+//	DOCUSIGN_TEMPLATEID=XxxXXXXXX
 //
-// DOCUSIGN_CONFIG={"key":"XXXX-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX","user":"xxxxx@xxxxx.xxx","pwd":"xxxxxxx","acctId":"XXXXXX"}
 //
 // If you wish to skip generating an oauth2 token, you may define an environment
 // variable named DOCUSIGN_TOKEN which contains an existing token.
@@ -35,60 +38,30 @@ import (
 	"golang.org/x/net/context"
 )
 
-type InviteData struct {
-	ConfName       string `json:"confName" xml:"ConfName" ds:"txtConfName,Fellow"`
-	Location       string `json:"location" xml:"Location" ds:"txtLocation,Fellow"`
-	ConfDate       string `json:"confDate" xml:"ConfDate" ds:"txtConfDate,Fellow"`
-	Pid            int    `json:"pid" xml:"Pid" ds:"-"`
-	Prefix         string `json:"prefix" xml:"Prefix" ds:"txtPrefix,Conferee"`
-	LastName       string `json:"lName" xml:"LName" ds:"txtLName,Conferee"`
-	FirstName      string `json:"fName" xml:"FName" ds:"txtFName,Conferee"`
-	Middle         string `json:"middle" xml:"Middle" ds:"txtMiddle,Conferee"`
-	Suffix         string `json:"suffix" xml:"Suffix" ds:"txtSuffix,Conferee"`
-	Email          string `json:"email" xml:"Email" ds:"txtEmail,Conferee,email"`
-	Aff            string `json:"aff" xml:"Aff" ds:"txtAff,Conferee"`
-	AffTitle       string `json:"affTitle" xml:"AffTitle" ds:"txtAffTitle,Conferee"`
-	HomeAddr       string `json:"homeAddr" xml:"HomeAddr" ds:"txtHomeAddr,Conferee"`
-	HomePhone      string `json:"homePhone" xml:"HomePhone" ds:"txtHomePhone,Conferee"`
-	HomeFax        string `json:"homeFax" xml:"HomeFax" ds:"txtHomeFax,Conferee"`
-	BusAddr        string `json:"busAddr" xml:"BusAddr" ds:"txtBusAddr,Conferee"`
-	BusPhone       string `json:"busPhone" xml:"BusPhone" ds:"txtBusPhone,Conferee"`
-	BusFax         string `json:"busFax" xml:"BusFax" ds:"txtBusFax,Conferee"`
-	Correspondence string `json:"correspondence" xml:"Correspondence" ds:"txtCorrespondence,Conferee,dl"`
-	ConfereeList   string `json:"confereeList" xml:"ConfereeList" ds:"txtConfereeList,Conferee,dl"`
-	Payment        string `json:"payment" xml:"Payment" ds:"txtPayment,Conferee,dl"`
-	ListEmail      string `json:"listEmail" xml:"ListEmail" ds:"txtListEmail,Conferee,email"`
-	TableTent      string `json:"TableTent" xml:"TableTent" ds:"txtTableTent,Conferee"`
-	Diet           string `json:"diet" xml:"Diet" ds:"txtDiet,Conferee"`
-	Hotel          string `json:"hotel" xml:"Hotel" ds:"txtHotel,Conferee"`
-	AnythingElse   string `json:"anythingElse" xml:"AnythingElse" ds:"txtAnythingElse,Conferee"`
-	Govt           string `json:"govt" xml:"Govt" ds:"rbUSCit,Conferee,rb"`
-	Country        string `json:"country" xml:"Country" ds:"txtCountry,Conferee"`
-	SSN            bool   `json:"ssn" xml:"SSN" ds:"cbSSN,Conferee,cb"`
-}
+var testEnvId string
+var testTemplateId string
 
-var testEnvId = "04885769-590b-4412-8c4e-a527b4da1925"
-var testTemplateId = "6b000a67-42cb-4d9a-820a-afa19c0e43cf"
+var testCtx context.Context
 
 func TestMain(m *testing.M) {
-	//LogRawResponse = true
-
-	UseDemoServer()
-	DefaultCtx = context.WithValue(DefaultCtx, HTTPClient, http.DefaultClient)
+	testCtx = UseDemoServer(nil, nil)
+	testCtx = context.WithValue(testCtx, HTTPClient, http.DefaultClient)
 	os.Exit(m.Run())
 }
 
 func TestCalls(t *testing.T) {
-	t.Skip()
-	var cfg *Config
-	ctx := DefaultCtx
 
-	testConfigString := os.Getenv("DOCUSIGN_CONFIG")
+	ctx := UseDemoServer(nil, nil)
+	ctx = context.WithValue(ctx, HTTPClient, http.DefaultClient)
 
-	err := json.Unmarshal([]byte(testConfigString), &cfg)
-	if err != nil {
-		t.Errorf("Unable to unmarshal DOCUSIGN_CONFIG: %v", err)
-		return
+	testEnvId = os.Getenv("DOCUSIGN_TESTENVID")
+	testTemplateId = os.Getenv("DOCUSIGN_TEMPLATEID")
+
+	cfg := &Config{
+		UserName:      os.Getenv("DOCUSIGN_USERNAME"),
+		Password:      os.Getenv("DOCUSIGN_PASSWORD"),
+		IntegratorKey: os.Getenv("DOCUSIGN_APIKEY"),
+		AccountId:     os.Getenv("DOCUSIGN_ACCTID"),
 	}
 
 	if cfg.UserName == "" || cfg.Password == "" || cfg.IntegratorKey == "" || cfg.AccountId == "" {
@@ -96,34 +69,34 @@ func TestCalls(t *testing.T) {
 		return
 
 	}
-
+	var err error
 	testToken := os.Getenv("DOCUSIGN_TOKEN")
 	var c *OauthCredential
 
 	if testToken > "" {
-		c = &OauthCredential{AccessToken: testToken}
+		c = &OauthCredential{AccessToken: testToken, AccountId: cfg.AccountId}
 	} else {
-		c, err = cfg.OauthCredential(DefaultCtx)
+		c, err = cfg.OauthCredential(ctx)
 		if err != nil {
 			t.Errorf("Ouauth2 token fail: %v", err)
 			return
 		}
 		t.Logf("Token: %s\n", c.AccessToken)
 		defer func() {
-			if err := c.Revoke(DefaultCtx); err != nil {
+			if err := c.Revoke(ctx); err != nil {
 				t.Errorf("Revoke token failed: %v", err)
 			}
 		}()
 	}
-	sv := New(cfg.AccountId, c)
+	sv := New(ctx, c)
 
-	_, err = sv.GetTemplate(ctx, testTemplateId)
+	_, err = sv.GetTemplate(testTemplateId)
 	if err != nil {
 		t.Errorf("GetTemplate: %v", err)
 		return
 	}
 
-	r, err := sv.TemplateSearch(DefaultCtx)
+	r, err := sv.TemplateSearch()
 	if err != nil {
 		t.Errorf("TemplateSearch: %v", err)
 		return
@@ -134,15 +107,14 @@ func TestCalls(t *testing.T) {
 	}
 
 	// Get Draft Folder
-	//LogRawRequest = true
 	var draftFolder string
-	fl, err := sv.FolderList(DefaultCtx, FolderTemplatesIncluede)
+	fl, err := sv.FolderList(FolderTemplatesInclude)
 	if err != nil {
 		t.Errorf("GetFolderList: %v", err)
 		return
 	}
 	for _, fd := range fl.Folders {
-		fmt.Printf("Folder: %s  %s\n", fd.FolderId, fd.Name)
+
 		if fd.Name == "Draft" {
 			draftFolder = fd.FolderId
 		}
@@ -151,29 +123,27 @@ func TestCalls(t *testing.T) {
 		t.Errorf("Unable to find Draft folder")
 		return
 	}
-
-	_, err = sv.AccountCustomFields(DefaultCtx)
+	sv.AccountCustomFields()
+	_, err = sv.AccountCustomFields()
 	if err != nil {
 		t.Errorf("AccountCustomFields error: %v", err)
 		return
 	}
 
-	euris, err := sv.EnvelopeStatusChanges(DefaultCtx, StatusChangeToDate(time.Now()), StatusChangeFromDate(time.Now().AddDate(0, 0, -1)),
+	_, err = sv.EnvelopeStatusChanges(StatusChangeToDate(time.Now()), StatusChangeFromDate(time.Now().AddDate(0, 0, -1)),
 		StatusChangeStatusCode("created"), StatusChangeFromToStatus("created"), StatusChangeCustomField("PID", "123456"))
 	//(time.Now().Add(time.Hour*24*-30)), StatusChangeToDate(time.Now()))
 	if err != nil {
 		t.Errorf("EnvelopeStatusChanges error: %v", err)
 		return
 	}
-	fmt.Printf("Total Status changes returned - %d\n", len(euris.Envelopes))
 
-	exs, err := sv.EnvelopeSearch(DefaultCtx, SearchFolderDrafts, EnvelopeSearchCount(3), EnvelopeSearchFromDate(time.Now().AddDate(0, -1, 0)),
+	_, err = sv.EnvelopeSearch(SearchFolderDrafts, EnvelopeSearchCount(3), EnvelopeSearchFromDate(time.Now().AddDate(0, -1, 0)),
 		EnvelopeSearchToDate(time.Now()), EnvelopeSearchIncludeRecipients)
 	if err != nil {
 		t.Errorf("EnvelopeSearch error: %v", err)
 		return
 	}
-	fmt.Printf("Total Envelopes Returned: %d %s\n", len(exs.FolderItems), exs.TotalRows)
 
 	//STOP HERE
 	return
@@ -192,7 +162,7 @@ func TestCalls(t *testing.T) {
 		Data:        file,
 	}
 
-	ex, err := sv.EnvelopeCreate(DefaultCtx, testEnv, u)
+	ex, err := sv.EnvelopeCreate(testEnv, u)
 	if err != nil {
 		t.Errorf("CreateEnvelope: %v", err)
 		return
@@ -237,7 +207,7 @@ func TestCalls(t *testing.T) {
 			},
 		},
 	}
-	aTab, err = sv.RecipientTabsAdd(DefaultCtx, testEnvId, "1", aTab)
+	aTab, err = sv.RecipientTabsAdd(testEnvId, "1", aTab)
 	if err != nil {
 		t.Errorf("Add Tabs error: %v", err)
 		return
@@ -247,7 +217,7 @@ func TestCalls(t *testing.T) {
 		deleteTabId = aTab.TextTabs[0].TabId
 	}
 
-	recList, err := sv.Recipients(DefaultCtx, testEnvId, RecipientsIncludeTabs)
+	recList, err := sv.Recipients(testEnvId, RecipientsIncludeTabs)
 	if err != nil {
 		t.Errorf("GetRecipients error: %v\n", err)
 		return
@@ -281,7 +251,7 @@ func TestCalls(t *testing.T) {
 		mTabs.ListTabs[0].ListItems[i].Selected = xval
 	}
 	mTabs.ListTabs[0].Value = "Y Val"
-	mTabs, err = sv.RecipientTabsModify(DefaultCtx, testEnvId, "2", mTabs)
+	mTabs, err = sv.RecipientTabsModify(testEnvId, "2", mTabs)
 	if err != nil {
 		t.Errorf("Modify Tabs Error: %v", err)
 		return
@@ -300,7 +270,7 @@ func TestCalls(t *testing.T) {
 			},
 		},
 	}
-	rTabs, err = sv.RecipientTabsRemove(DefaultCtx, testEnvId, "1", rTabs)
+	rTabs, err = sv.RecipientTabsRemove(testEnvId, "1", rTabs)
 	if err != nil {
 		t.Errorf("Error Deleting Tab: %v", err)
 		return
@@ -339,7 +309,7 @@ func TestCalls(t *testing.T) {
 		},
 	}
 
-	newRecipients, err = sv.RecipientsAdd(DefaultCtx, testEnvId, newRecipients)
+	newRecipients, err = sv.RecipientsAdd(testEnvId, newRecipients)
 	if err != nil {
 		t.Errorf("Recipients Add Error: %v", err)
 		return
@@ -351,7 +321,7 @@ func TestCalls(t *testing.T) {
 			newRecipients.Signers[i].Name = "Modified Name"
 		}
 	}
-	modRec, err := sv.RecipientsModify(DefaultCtx, testEnvId, newRecipients)
+	modRec, err := sv.RecipientsModify(testEnvId, newRecipients)
 	if err != nil {
 		t.Errorf("Recipients Modify Error: %v", err)
 		return
@@ -363,267 +333,7 @@ func TestCalls(t *testing.T) {
 		t.Errorf("RecipientsModify error: %v", rur.ErrorDetails)
 		return
 	}
-
-	//sv.RecipientTabsRemove(ctx, envId, recipId, rl)
-
-	//
-	/*
-				var draftFolder string
-
-			ret, err := sv.GetEnvelopeStatus(DefaultCtx, testEnv)
-			if err != nil {
-				t.Errorf("GetEnvelop error: %v", err)
-				return
-			}
-
-
-		recList, err := sv.GetRecipients(DefaultCtx, testEnv, GetRecipientsIncludeTabs)
-		if err != nil {
-			t.Errorf("GetRecipients error: %v\n", err)
-			//return
-		}
-		fmt.Printf("Total tabs: %d\n", len(recList.Signers[1].Tabs.TextTabs))
-
-		newRecipients := RecipientList{
-			Signers: []Signer{
-				Signer{
-					EmailRecipient: EmailRecipient{
-						Email: "extraRep@example.com",
-						Recipient: Recipient{
-							Name:              "Extra Name",
-							Note:              "This is the ,Note for Extra Name",
-							EmailNotification: &EmailNotification{EmailBody: "This is the recipient 3 email blurb", EmailSubject: "This is the Subject for recipient 3"},
-							RecipientId:       "3",
-							RoleName:          "Role3",
-							RoutingOrder:      "6",
-						},
-					},
-				},
-			},
-			CarbonCopies: []CarbonCopy{
-				CarbonCopy{
-					EmailRecipient: EmailRecipient{
-						Email: "cc@example.com",
-						Recipient: Recipient{
-							Name:              "CC Name",
-							Note:              "This is the ,Note for CCName",
-							EmailNotification: &EmailNotification{EmailBody: "This is the recipient 4 email blurb", EmailSubject: "This is the Subject for recipient 4"},
-							RecipientId:       "4",
-							RoleName:          "Role4",
-							RoutingOrder:      "5",
-						},
-					},
-				},
-			},
-		}
-
-		rx, err := sv.ModifyRecipients(DefaultCtx, testEnv, &newRecipients)
-		if err != nil {
-			t.Errorf("Add Recipeints Error: %v", err)
-			return
-		}
-		fmt.Printf("Total Recipients: %s\n", rx.RecipientCount)
-
-		delRec := RecipientList{
-			Signers: []Signer{
-				Signer{
-					EmailRecipient: EmailRecipient{
-						Recipient: Recipient{
-							RecipientId: "3",
-						},
-					},
-				},
-			},
-		}
-		rx, err = sv.RemoveRecipients(DefaultCtx, testEnv, &delRec)
-		if err != nil {
-			t.Errorf("Del recipients Error: %v", err)
-			return
-		}
-	*/
-	/* nTabs := &Tabs{
-		TextTabs: []TextTab{
-			TextTab{
-				BaseTab: BaseTab{
-					DocumentID: "1",
-					TabLabel:   "txtTextFieldY",
-				},
-				BasePosTab: BasePosTab{
-					TabId:      "0c5261cc-ffb5-4159-bd14-82f57cc04ce0",
-					XPosition:  "289",
-					YPosition:  "290",
-					PageNumber: "1",
-				},
-				BaseTemplateTab: BaseTemplateTab{
-					RecipientID: "1",
-				},
-				Value: "YValue",
-			},
-		},
-	}
-	txa, err := sv.AddTabs(DefaultCtx, testEnv, "1", nTabs)
-	if err != nil {
-		t.Errorf("AddTabs Error: %v", err)
-		return
-	}
-	fmt.Printf("Len Text Tabs: %d\n", len(txa.TextTabs)) */
-	/* tx, err := sv.GetTabs(DefaultCtx, testEnv, "2")
-	if err != nil {
-		t.Errorf("GetTabs Error: %v", err)
-		return
-	}
-	fmt.Printf("%#v\n", tx)
-	*/
-	/*
-
-	*/
-	/*
-		fel, err := sv.GetFolderEnvList(DefaultCtx, baseTestFolder)
-		if err != nil {
-			t.Errorf("Err: %v", err)
-			return
-		}
-		if len(fel.FolderItems) <= 0 {
-			t.Errorf("GetFolderEnvList failed to return folders")
-		}
-		for _, xE := range fel.FolderItems {
-			fmt.Printf("Nm: %s %s %s %s\n", xE.Name, xE.EnvelopeId, xE.Status, xE.Subject)
-		}
-
-		aevt, err := sv.GetEnvelopeAuditEvents(DefaultCtx, baseTestEnv)
-		if err != nil {
-			t.Errorf("GetEnvelopeAuditEvents failed: %v", err)
-
-		}
-		if len(aevt.AuditEvents) <= 0 {
-			t.Errorf("GetEnvelopeAuditEvents failed: No records returned")
-		}
-
-		nt, err := sv.GetEnvelopeNotification(DefaultCtx, baseTestEnv)
-		if err != nil {
-			t.Errorf("GetEnvelopeNotification failed: %v", err)
-			return
-		}
-		fmt.Printf("%v\n", nt)
-		if len(nt.Reminders.ReminderEnabled) <= 0 {
-			t.Errorf("GetEnvelopeNotification zero: ")
-		}
-
-		cf, err := sv.GetEnvelopeCustomFields(DefaultCtx, baseTestEnv)
-		if err != nil {
-			t.Errorf("GetEnvelopeCustomFields failed: %v", err)
-			return
-		}
-
-		if len(cf.TextCustomFields) <= 0 {
-			t.Errorf("GetEnvelopeCustomFields failed: ")
-		}
-		docList, err := sv.GetEnvelopeDocumentList(DefaultCtx, baseTestEnv)
-		if err != nil {
-			t.Errorf("GetEnvelopeDocumentList failed: %v", err)
-			return
-		}
-
-		if len(docList.EnvelopeDocuments) <= 0 {
-			t.Errorf("GetEnvelopeDocumentList failed: ")
-		}
-
-	*/
-	/*
-		fpdf, err := os.OpenFile("test.pdf", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
-		if err != nil {
-			t.Errorf("File Open: %v", err)
-			return
-		}
-
-		_, err = fpdf.Write([]byte("ABCAFDAFD\n"))
-		if err != nil {
-			t.Errorf("%v", err)
-		}
-		defer fpdf.Close()
-
-		err = sv.GetEnvelopeDocument(fpdf, baseTestEnv, "1", NmVal{Name: "show_changes", Value: "true"})
-		if err != nil {
-			t.Errorf("GetEnvelopeDocument: %v", err)
-			return
-		}
-		fmt.Printf("%v\n", docList)
-	*/
-	/*
-		err = sv.GetEnvelopeDocumentCombined(baseTestEnv, fpdf, NmVal{Name: "show_changes", Value: "true"}, NmVal{Name: "certificate", Value: "true"})
-		if err != nil {
-			t.Errorf("GetEnvelopeDocument: %v", err)
-			return
-		}
-	*/
-	/*
-			fpdf, err := os.OpenFile("HotelExpenseRpt.doc", os.O_RDONLY, os.ModePerm) //os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
-			if err != nil {
-				t.Errorf("File Open: %v", err)
-				return
-			}
-			dl := DocumentList{}
-			dl.Documents = make([]Document, 1, 1)
-			dl.Documents[0].DocumentId = "4"
-			dl.Documents[0].Order = "4"
-			dl.Documents[0].Name = "Uploadedx.doc"
-			fu := UploadFile{}
-			fu.ContentType = "application/msword"
-			fu.Data = fpdf
-			fu.FileName = "Uploadedx.doc"
-			fu.Id = "4"
-			_, err = sv.SetEnvelopeDocuments(baseTestEnv, dl, fu)
-
-
-		dl := DocumentList{}
-		dl.Documents = make([]Document, 1, 1)
-		dl.Documents[0].DocumentId = "3"
-		_, err = sv.RemoveEnvelopeDocuments(baseTestEnv, &dl)
-		if err != nil {
-			t.Errorf("ERR %v", err)
-
-		}
-	*/
-	/*
-		cl := &CustomFieldList{}
-		cl.TextCustomFields = []CustomField{CustomField{Name: "CustFld1", Value: "XWhatever"}, CustomField{Name: "CustFld2", Value: "XWhateverYea"}}
-		lx := ListCustomField{} //Name: "XName", Value: "X"}
-		lx.Name = "ListFld1"
-		lx.Value = "X"
-		lx.ListItems = []string{"A", "B", "C", "D"}
-		cl.ListCustomFields = []ListCustomField{lx}
-
-		cl, err = sv.AddEnvelopeCustomFields(baseTestEnv, cl)
-		if err != nil {
-			t.Errorf("Err: %v", err)
-		}
-
-		cl, err = sv.GetEnvelopeCustomFields(baseTestEnv)
-		if err != nil {
-			t.Errorf("Err: %v", err)
-		}
-		for i := range cl.TextCustomFields {
-			cl.TextCustomFields[i].Value = ""
-			cl.TextCustomFields[i].Name = ""
-			cl.TextCustomFields[i].Required = ""
-			cl.TextCustomFields[i].Show = ""
-		}
-		for i := range cl.ListCustomFields {
-			cl.ListCustomFields[i].Value = ""
-			cl.ListCustomFields[i].Name = ""
-			cl.ListCustomFields[i].Required = ""
-			cl.ListCustomFields[i].Show = ""
-			cl.ListCustomFields[i].ListItems = []string{}
-		}
-
-		_, err = sv.RemoveEnvelopeCustomFields(baseTestEnv, cl)
-		if err != nil {
-			t.Errorf("Err: %v", err)
-		}
-
-		return
-		//f, err := Get
-	*/
+	return
 }
 
 func testEnvelopePayload(userName string) *Envelope {
@@ -901,7 +611,8 @@ func TestXML(t *testing.T) {
 		t.Fatalf("Open Connect.xml: %v", err)
 		return
 	}
-	var v *DocuSignEnvelopeInformation = &DocuSignEnvelopeInformation{}
+
+	var v *ConnectData = &ConnectData{}
 	decoder := xml.NewDecoder(f)
 	err = decoder.Decode(v)
 	if err != nil {

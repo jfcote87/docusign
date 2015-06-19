@@ -25,20 +25,43 @@ func registerContextClientFunc(fn contextClientFunc) {
 	contextClientFuncs = append(contextClientFuncs, fn)
 }
 
-func contextClient(ctx context.Context) (*http.Client, error) {
+// ContextSetting provides default values for creating a new
+// docusing.Serivce.  If needed, a Context's docusign.APISettings
+// Value shoud be set.
+type ContextSetting struct {
+	Client         *http.Client
+	Endpoint       string
+	LogRawRequest  func(context.Context, string, ...interface{})
+	LogRawResponse func(context.Context, string, ...interface{})
+}
+
+// contextClient returns the appropriate
+func contextClient(ctx context.Context) *http.Client {
 	if hc, ok := ctx.Value(HTTPClient).(*http.Client); ok {
-		return hc, nil
+		return hc
 	}
 	for _, fn := range contextClientFuncs {
 		c, err := fn(ctx)
 		if err != nil {
-			return nil, err
+			panic(err)
 		}
 		if c != nil {
-			return c, nil
+			return c
 		}
 	}
-	return http.DefaultClient, nil
+	return http.DefaultClient
+}
+
+// contextSettings returns a ContextSetting from the context.
+func contextSettings(ctx context.Context) *ContextSetting {
+	if cs, ok := ctx.Value(APISettings).(*ContextSetting); ok {
+		if cs.Client == nil {
+			return &ContextSetting{Client: contextClient(ctx), Endpoint: cs.Endpoint, LogRawRequest: cs.LogRawRequest, LogRawResponse: cs.LogRawResponse}
+		}
+		return cs
+	}
+	return &ContextSetting{Client: contextClient(ctx), Endpoint: liveUrl, LogRawRequest: nil, LogRawResponse: nil}
+
 }
 
 // HTTPClient is the context key to use with golang.org/x/net/context's
@@ -47,9 +70,9 @@ var HTTPClient contextKey1
 
 // APIEndpoint is the context key to determine the endpoint (demo or live)
 // to use. If not set, the live version is assumed.
-var APIEndpoint contextKey2
+var APISettings contextKey2
 
-// contextKey is just an empty struct. It exists so HTTPClient can be
+// contextKeyX is just an empty struct. It exists so HTTPClient can be
 // an immutable public variable with a unique type. It's immutable
 // because nobody else can create a contextKey, being unexported.
 type contextKey1 struct{}

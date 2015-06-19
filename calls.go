@@ -11,8 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"golang.org/x/net/context"
 )
 
 // FolderList returns a list of the folders for the account, including the
@@ -21,7 +19,7 @@ import (
 //
 // RestApi documentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Get%20Folder%20List.htm
-func (s *Service) FolderList(ctx context.Context, args ...FolderTemplateParam) (fl *FolderList, err error) {
+func (s *Service) FolderList(args ...FolderTemplateParam) (fl *FolderList, err error) {
 	q := make(url.Values)
 	for _, nv := range args {
 		q.Add(nv.Name, nv.Value)
@@ -31,23 +29,23 @@ func (s *Service) FolderList(ctx context.Context, args ...FolderTemplateParam) (
 		queryStr = "?" + q.Encode()
 	}
 	urlStr := "folders" + queryStr
-	err = s.do(ctx, "GET", urlStr, nil, &fl)
+	err = s.do("GET", urlStr, nil, &fl)
 	return
 }
 
 type FolderTemplateParam NmVal
 
-var FolderTemplatesIncluede = FolderTemplateParam{Name: "template", Value: "include"}
+var FolderTemplatesInclude = FolderTemplateParam{Name: "template", Value: "include"}
 var FolderTemplatesOnly = FolderTemplateParam{Name: "template", Value: "only"}
 
-// FolderEnvSearc returns a list of the envelopes in the specified folder. You can narrow
+// FolderEnvSearch returns a list of the envelopes in the specified folder. You can narrow
 // the query by adding some optional items.
 // additions: start_position={ integer}, from_date = {date/time}, to_date= {date/time},
 // search_text={text}, status={envelope status}, owner_name={username}, owner_email={email}
 //
 // RestApi documentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Get%20Folder%20Envelope%20List.htm
-func (s *Service) FolderEnvSearch(ctx context.Context, folderId string, args ...FolderEnvSearchParam) (f *FolderEnvList, err error) {
+func (s *Service) FolderEnvSearch(folderId string, args ...FolderEnvSearchParam) (f *FolderEnvList, err error) {
 	q := make(url.Values)
 	for _, nv := range args {
 		q.Add(nv.Name, nv.Value)
@@ -57,7 +55,7 @@ func (s *Service) FolderEnvSearch(ctx context.Context, folderId string, args ...
 		queryStr = "?" + q.Encode()
 	}
 	urlStr := fmt.Sprintf("folders/%s", folderId) + queryStr
-	err = s.do(ctx, "GET", urlStr, nil, &f)
+	err = s.do("GET", urlStr, nil, &f)
 	return
 }
 
@@ -65,7 +63,6 @@ type FolderEnvSearchParam NmVal
 
 func FolderEnvSearchStartPosition(pos int) FolderEnvSearchParam {
 	return FolderEnvSearchParam{Name: "startpostition", Value: strconv.Itoa(pos)}
-
 }
 
 func FolderEnvSearchFromDate(tm time.Time) FolderEnvSearchParam {
@@ -104,7 +101,7 @@ func FolderEnvSearchOwnerEmail(email string) FolderEnvSearchParam {
 //
 // RestApi documentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST API References/Get List of Envelopes in Folders.htm
-func (s *Service) EnvelopeSearch(ctx context.Context, searchFld SearchFolder, args ...SearchFolderParam) (f *FolderEnvList, err error) {
+func (s *Service) EnvelopeSearch(searchFld SearchFolder, args ...SearchFolderParam) (f *FolderEnvList, err error) {
 	q := make(url.Values)
 	for _, nv := range args {
 		q.Add(nv.Name, nv.Value)
@@ -114,7 +111,7 @@ func (s *Service) EnvelopeSearch(ctx context.Context, searchFld SearchFolder, ar
 		queryStr = "?" + q.Encode()
 	}
 	urlStr := fmt.Sprintf("search_folders/%s", searchFld) + queryStr
-	err = s.do(ctx, "GET", urlStr, nil, &f)
+	err = s.do("GET", urlStr, nil, &f)
 	return
 }
 
@@ -161,9 +158,9 @@ var EnvelopeSearchIncludeRecipients = SearchFolderParam{Name: "include_recipient
 //
 // RestApi documentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Get%20Envelope%20Audit%20Events.htm
-func (s *Service) EnvelopeAuditEvents(ctx context.Context, envId string) (a *AuditEventList, err error) {
+func (s *Service) EnvelopeAuditEvents(envId string) (a *AuditEventList, err error) {
 	urlStr := fmt.Sprintf("envelopes/%s/audit_events", envId)
-	err = s.do(ctx, "GET", urlStr, nil, &a)
+	err = s.do("GET", urlStr, nil, &a)
 	return
 }
 
@@ -171,18 +168,18 @@ func (s *Service) EnvelopeAuditEvents(ctx context.Context, envId string) (a *Aud
 //
 // RestApi documentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Get%20Envelope%20Notification%20Information.htm
-func (s *Service) EnvelopeNotification(ctx context.Context, envId string) (n *Notification, err error) {
+func (s *Service) EnvelopeNotification(envId string) (n *Notification, err error) {
 	urlStr := fmt.Sprintf("envelopes/%s/notification", envId)
-	err = s.do(ctx, "GET", urlStr, nil, &n)
+	err = s.do("GET", urlStr, nil, &n)
 	return
 }
 
 // EnvelopeCustomFields returns all custom field info in a Custom Field List
 // RestApi documentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Get%20Envelope%20Custom%20Field%20Information.htm
-func (s *Service) EnvelopeCustomFields(ctx context.Context, envId string) (cl *CustomFieldList, err error) {
+func (s *Service) EnvelopeCustomFields(envId string) (cl *CustomFieldList, err error) {
 	urlStr := fmt.Sprintf("envelopes/%s/custom_fields", envId)
-	err = s.do(ctx, "GET", urlStr, nil, &cl)
+	err = s.do("GET", urlStr, nil, &cl)
 	return
 }
 
@@ -190,9 +187,9 @@ func (s *Service) EnvelopeCustomFields(ctx context.Context, envId string) (cl *C
 // ErrorDetails struct of the CustomField or ListCustomField item.
 // RestApi documentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Add%20Envelope%20Custom%20Fields%20to%20an%20Envelope.htm
-func (s *Service) EnvelopeAddCustomFields(ctx context.Context, envId string, l *CustomFieldList) (cl *CustomFieldList, err error) {
+func (s *Service) EnvelopeAddCustomFields(envId string, l *CustomFieldList) (cl *CustomFieldList, err error) {
 	urlStr := fmt.Sprintf("envelopes/%s/custom_fields", envId)
-	err = s.do(ctx, "POST", urlStr, l, &cl)
+	err = s.do("POST", urlStr, l, &cl)
 	return
 }
 
@@ -200,27 +197,27 @@ func (s *Service) EnvelopeAddCustomFields(ctx context.Context, envId string, l *
 // are found in ErrorDetails struct of CustomField or ListCustomField items.  Nil ErrorDetails means success
 // RestApi documentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Modify%20Envelope%20Custom%20Fields%20for%20an%20Envelope.htm
-func (s *Service) EnvelopeModifyCustomFields(ctx context.Context, envId string, l *CustomFieldList) (cl *CustomFieldList, err error) {
+func (s *Service) EnvelopeModifyCustomFields(envId string, l *CustomFieldList) (cl *CustomFieldList, err error) {
 	urlStr := fmt.Sprintf("envelopes/%s/custom_fields", envId)
-	err = s.do(ctx, "PUT", urlStr, l, &cl)
+	err = s.do("PUT", urlStr, l, &cl)
 	return
 }
 
 // EnvelopeRemoveCustomFields deletes Custom Fields using the Id field in CustomField items.
 // RestApi documentatiion
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Remove%20Envelope%20Custom%20Fields%20from%20an%20Envelope.htm
-func (s *Service) EnvelopeRemoveCustomFields(ctx context.Context, envId string, l *CustomFieldList) (cl *CustomFieldList, err error) {
+func (s *Service) EnvelopeRemoveCustomFields(envId string, l *CustomFieldList) (cl *CustomFieldList, err error) {
 	urlStr := fmt.Sprintf("envelopes/%s/custom_fields", envId)
-	err = s.do(ctx, "DELETE", urlStr, l, &cl)
+	err = s.do("DELETE", urlStr, l, &cl)
 	return
 }
 
 // EnvelopeDocuments returns a Document Asset List for an envelope
 // RestApi Documentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Get%20List%20of%20Envelope%20Documents.htm
-func (s *Service) EnvelopeDocuments(ctx context.Context, envId string) (docList *DocumentAssetList, err error) {
+func (s *Service) EnvelopeDocuments(envId string) (docList *DocumentAssetList, err error) {
 	urlStr := fmt.Sprintf("envelopes/%s/documents", envId)
-	err = s.do(ctx, "GET", urlStr, nil, &docList)
+	err = s.do("GET", urlStr, nil, &docList)
 	return
 }
 
@@ -230,7 +227,7 @@ func (s *Service) EnvelopeDocuments(ctx context.Context, envId string) (docList 
 //
 // RestApi Documentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Get%20Document%20from%20Envelope.htm
-func (s *Service) EnvelopeDocument(ctx context.Context, outputBuffer io.Writer, envId string, docId string, args ...EnvelopeDocumentParam) (err error) {
+func (s *Service) EnvelopeDocument(outputBuffer io.Writer, envId string, docId string, args ...EnvelopeDocumentParam) (err error) {
 	q := make(url.Values)
 	for _, nv := range args {
 		q.Add(nv.Name, nv.Value)
@@ -240,7 +237,7 @@ func (s *Service) EnvelopeDocument(ctx context.Context, outputBuffer io.Writer, 
 		queryStr = "?" + q.Encode()
 	}
 	urlStr := fmt.Sprintf("envelopes/%s/documents/%s", envId, docId) + queryStr
-	err = s.doPdf(ctx, outputBuffer, "GET", urlStr, nil)
+	err = s.doPdf(outputBuffer, "GET", urlStr, nil)
 	return
 }
 
@@ -256,7 +253,7 @@ var EnvelopeDocumentShowChanges = EnvelopeDocumentParam{Name: "show_changes", Va
 //
 // RestApi Documentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Get%20Envelope%20Documents%20and%20Certificate.htm
-func (s *Service) EnvelopeDocumentsCombined(ctx context.Context, outputBuffer io.Writer, envId string, args ...EnvelopeDocumentsCombinedParam) (err error) {
+func (s *Service) EnvelopeDocumentsCombined(outputBuffer io.Writer, envId string, args ...EnvelopeDocumentsCombinedParam) (err error) {
 	q := make(url.Values)
 	for _, nv := range args {
 		q.Add(nv.Name, nv.Value)
@@ -266,7 +263,7 @@ func (s *Service) EnvelopeDocumentsCombined(ctx context.Context, outputBuffer io
 		queryStr = "?" + q.Encode()
 	}
 	urlStr := fmt.Sprintf("envelopes/%s/documents/combined", envId) + queryStr
-	err = s.doPdf(ctx, outputBuffer, "GET", urlStr, nil)
+	err = s.doPdf(outputBuffer, "GET", urlStr, nil)
 	return
 }
 
@@ -282,7 +279,7 @@ var EnvelopeDocumentsCombinedWatermark = EnvelopeDocumentsCombinedParam{Name: "w
 // api_password	Boolean
 // include_account_id_guid Boolean
 // login_settings string [all,none]
-func (s *Service) LoginInformation(ctx context.Context, args ...LoginInfoParam) (li *LoginInfo, err error) {
+func (s *Service) LoginInformation(args ...LoginInfoParam) (li *LoginInfo, err error) {
 	q := make(url.Values)
 	for _, nv := range args {
 		q.Add(nv.Name, nv.Value)
@@ -291,29 +288,16 @@ func (s *Service) LoginInformation(ctx context.Context, args ...LoginInfoParam) 
 	if len(q) > 0 {
 		queryStr = "?" + q.Encode()
 	}
-	urlStr := "login_information" + queryStr
-	err = s.do(ctx, "GET", urlStr, nil, &li)
+	urlStr := "/login_information" + queryStr
+	fmt.Printf("Q: %s\n", queryStr)
+	err = s.do("GET", urlStr, nil, &li)
 	return
 }
 
 type LoginInfoParam NmVal
 
-func LoginInformationApiPassword(include bool) *LoginInfoParam {
-	val := "false"
-	if include {
-		val = "true"
-	}
-	return &LoginInfoParam{Name: "api_password", Value: val}
-}
-
-func LoginInformationAcctGUID(include bool) *LoginInfoParam {
-	val := "false"
-	if include {
-		val = "true"
-	}
-	return &LoginInfoParam{Name: "include_account_id_guid", Value: val}
-}
-
+var LoginInformationIncludeApiPassword = LoginInfoParam{Name: "api_password", Value: "true"}
+var LoginInformationAcctGUID = LoginInfoParam{Name: "include_account_id_guid", Value: "true"}
 var LoginInformationSettingsAll = LoginInfoParam{Name: "login_settings", Value: "all"}
 var LoginInformationSettingsNone = LoginInfoParam{Name: "login_settings", Value: "none"}
 
@@ -321,9 +305,9 @@ var LoginInformationSettingsNone = LoginInfoParam{Name: "login_settings", Value:
 // or sent.
 // RestApi Documentation
 //
-func (s *Service) EnvelopeCreate(ctx context.Context, env *Envelope, files ...*UploadFile) (envResp *EnvelopeResponse, err error) {
+func (s *Service) EnvelopeCreate(env *Envelope, files ...*UploadFile) (envResp *EnvelopeResponse, err error) {
 	urlStr := ("envelopes")
-	err = s.do(ctx, "POST", urlStr, env, &envResp, files...)
+	err = s.do("POST", urlStr, env, &envResp, files...)
 	return
 }
 
@@ -338,7 +322,7 @@ func (s *Service) EnvelopeCreate(ctx context.Context, env *Envelope, files ...*U
 // envelopeId={envelopeId}, custom_field={envelope custom field name}={envelope custom field value}, transaction_ids={transactionIds (comma separated)}
 //
 // Use DsQueryTimeFormat to formate dateTime query arguments
-func (s *Service) EnvelopeStatusChanges(ctx context.Context, args ...EnvelopeStatusChangesParam) (el *EnvelopeList, err error) {
+func (s *Service) EnvelopeStatusChanges(args ...EnvelopeStatusChangesParam) (el *EnvelopeList, err error) {
 	q := make(url.Values)
 	for _, nv := range args {
 		q.Add(nv.Name, nv.Value)
@@ -348,7 +332,7 @@ func (s *Service) EnvelopeStatusChanges(ctx context.Context, args ...EnvelopeSta
 		queryStr = "?" + q.Encode()
 	}
 	urlStr := "envelopes" + queryStr
-	err = s.do(ctx, "GET", urlStr, nil, &el)
+	err = s.do("GET", urlStr, nil, &el)
 	return
 }
 
@@ -386,9 +370,9 @@ func StatusChangeTransactionId(transactionIds ...string) EnvelopeStatusChangesPa
 //
 // RestApi Documentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST API References/Get Envelope Status for One Envelope.htm
-func (s *Service) EnvelopeStatus(ctx context.Context, envId string) (res *EnvelopeUris, err error) {
+func (s *Service) EnvelopeStatus(envId string) (res *EnvelopeUris, err error) {
 	urlStr := "envelopes/" + envId
-	err = s.do(ctx, "GET", urlStr, nil, &res)
+	err = s.do("GET", urlStr, nil, &res)
 	return
 }
 
@@ -396,29 +380,29 @@ func (s *Service) EnvelopeStatus(ctx context.Context, envId string) (res *Envelo
 //
 // RestApi Documentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Get%20Envelope%20Status%20for%20more%20than%20one%20envelope.htm
-func (s *Service) EnvelopeStatusMulti(ctx context.Context, envIds ...string) (res []EnvelopeUris, err error) {
+func (s *Service) EnvelopeStatusMulti(envIds ...string) (res []EnvelopeUris, err error) {
 	var retVal struct {
 		Envelopes     []EnvelopeUris `json:"envelopes"`
 		ResultSetSize string         `json:"resultSetSize"`
 	}
 	envList := map[string][]string{"envelopeIds": envIds}
 	urlStr := "envelopes/status?envelope_ids=request_body"
-	err = s.do(ctx, "PUT", urlStr, envList, &retVal)
+	err = s.do("PUT", urlStr, envList, &retVal)
 	if err != nil {
 		return nil, err
 	}
 	return retVal.Envelopes, nil
 }
 
-func (s *Service) EnvelopeSetDocuments(ctx context.Context, envId string, dl *DocumentList, files ...*UploadFile) (res *DocumentAssetList, err error) {
+func (s *Service) EnvelopeSetDocuments(envId string, dl *DocumentList, files ...*UploadFile) (res *DocumentAssetList, err error) {
 	urlStr := fmt.Sprintf("envelopes/%s/documents", envId)
-	err = s.do(ctx, "PUT", urlStr, dl, &res, files...)
+	err = s.do("PUT", urlStr, dl, &res, files...)
 	return
 }
 
-func (s *Service) EnvelopeRemoveDocuments(ctx context.Context, envId string, dl *DocumentList) (res *DocumentAssetList, err error) {
+func (s *Service) EnvelopeRemoveDocuments(envId string, dl *DocumentList) (res *DocumentAssetList, err error) {
 	urlStr := fmt.Sprintf("envelopes/%s/documents", envId)
-	err = s.do(ctx, "DELETE", urlStr, dl, &res)
+	err = s.do("DELETE", urlStr, dl, &res)
 	return
 }
 
@@ -426,9 +410,9 @@ func (s *Service) EnvelopeRemoveDocuments(ctx context.Context, envId string, dl 
 // DocumentFieldList ErrorDetails field.
 // RestApi Documentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Add%20Custom%20Document%20Fields%20to%20an%20Envelope%20Document.htm
-func (s *Service) DocumentAddCustomFields(ctx context.Context, envId, docId string, dfl *DocumentFieldList) (res *DocumentFieldList, err error) {
+func (s *Service) DocumentAddCustomFields(envId, docId string, dfl *DocumentFieldList) (res *DocumentFieldList, err error) {
 	urlStr := fmt.Sprintf("envelopes/%s/documents/%s/fields", envId, docId)
-	err = s.do(ctx, "POST", urlStr, dfl, &res)
+	err = s.do("POST", urlStr, dfl, &res)
 	return
 }
 
@@ -436,9 +420,9 @@ func (s *Service) DocumentAddCustomFields(ctx context.Context, envId, docId stri
 // DocumentFieldList ErrorDetails field.
 // RestApi Documentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Modify%20Custom%20Document%20Fields%20for%20an%20Envelope%20Document.htm
-func (s *Service) DocumentModifyCustomFields(ctx context.Context, envId, docId string, dfl *DocumentFieldList) (res *DocumentFieldList, err error) {
+func (s *Service) DocumentModifyCustomFields(envId, docId string, dfl *DocumentFieldList) (res *DocumentFieldList, err error) {
 	urlStr := fmt.Sprintf("envelopes/%s/documents/%s/fields", envId, docId)
-	err = s.do(ctx, "PUT", urlStr, dfl, &res)
+	err = s.do("PUT", urlStr, dfl, &res)
 	return
 }
 
@@ -446,9 +430,9 @@ func (s *Service) DocumentModifyCustomFields(ctx context.Context, envId, docId s
 // DocumentFieldList ErrorDetails field.
 // RestApi Documentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Delete%20Custom%20Document%20Fields%20from%20an%20Envelope%20Document.htm
-func (s *Service) DocumentRemoveCustomFields(ctx context.Context, envId, docId string, dfl *DocumentFieldList) (res *DocumentFieldList, err error) {
+func (s *Service) DocumentRemoveCustomFields(envId, docId string, dfl *DocumentFieldList) (res *DocumentFieldList, err error) {
 	urlStr := fmt.Sprintf("envelopes/%s/documents/%s/fields", envId, docId)
-	err = s.do(ctx, "DELETE", urlStr, dfl, &res)
+	err = s.do("DELETE", urlStr, dfl, &res)
 	return
 }
 
@@ -456,7 +440,7 @@ func (s *Service) DocumentRemoveCustomFields(ctx context.Context, envId, docId s
 // Optional query strings: include_tabs={true or false}, include_extended={true or false}
 // RestApi Documentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Get%20Envelope%20Recipient%20Status.htm
-func (s *Service) Recipients(ctx context.Context, envId string, args ...RecipientsParam) (res *RecipientList, err error) {
+func (s *Service) Recipients(envId string, args ...RecipientsParam) (res *RecipientList, err error) {
 	q := make(url.Values)
 	for _, nv := range args {
 		q.Add(nv.Name, nv.Value)
@@ -466,7 +450,7 @@ func (s *Service) Recipients(ctx context.Context, envId string, args ...Recipien
 		queryStr = "?" + q.Encode()
 	}
 	urlStr := fmt.Sprintf("envelopes/%s/recipients", envId) + queryStr
-	err = s.do(ctx, "GET", urlStr, nil, &res)
+	err = s.do("GET", urlStr, nil, &res)
 	return
 }
 
@@ -481,7 +465,7 @@ var RecipientsResend = RecipientsParam{Name: "resend_envelope", Value: "true"}
 // Optional addition: resend_envelope {true or false}
 // RestApi Documentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Modify%20or%20Correct%20and%20Resend%20Recipient%20Information.htm
-func (s *Service) RecipientsAdd(ctx context.Context, envId string, rl *RecipientList, args ...RecipientsParam) (res *RecipientList, err error) {
+func (s *Service) RecipientsAdd(envId string, rl *RecipientList, args ...RecipientsParam) (res *RecipientList, err error) {
 	q := make(url.Values)
 	for _, nv := range args {
 		q.Add(nv.Name, nv.Value)
@@ -491,7 +475,7 @@ func (s *Service) RecipientsAdd(ctx context.Context, envId string, rl *Recipient
 		queryStr = "?" + q.Encode()
 	}
 	urlStr := fmt.Sprintf("envelopes/%s/recipients", envId) + queryStr
-	err = s.do(ctx, "POST", urlStr, rl, &res)
+	err = s.do("POST", urlStr, rl, &res)
 	return
 }
 
@@ -499,7 +483,7 @@ func (s *Service) RecipientsAdd(ctx context.Context, envId string, rl *Recipient
 // Optional addition: resend_envelope {true or false}
 // RestApi Documentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Get%20Envelope%20Recipient%20Status.htm
-func (s *Service) RecipientsModify(ctx context.Context, envId string, rl *RecipientList, args ...RecipientsParam) (res *RecipientUpdateResult, err error) {
+func (s *Service) RecipientsModify(envId string, rl *RecipientList, args ...RecipientsParam) (res *RecipientUpdateResult, err error) {
 	q := make(url.Values)
 	for _, nv := range args {
 		q.Add(nv.Name, nv.Value)
@@ -509,7 +493,7 @@ func (s *Service) RecipientsModify(ctx context.Context, envId string, rl *Recipi
 		queryStr = "?" + q.Encode()
 	}
 	urlStr := fmt.Sprintf("envelopes/%s/recipients", envId) + queryStr
-	err = s.do(ctx, "PUT", urlStr, rl, &res)
+	err = s.do("PUT", urlStr, rl, &res)
 	return
 }
 
@@ -517,18 +501,18 @@ func (s *Service) RecipientsModify(ctx context.Context, envId string, rl *Recipi
 // Optional addition: resend_envelope {true or false}
 // RestApi Documentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Delete%20Recipients%20from%20an%20Envelope.htm
-func (s *Service) RecipientsRemove(ctx context.Context, envId string, rl *RecipientList) (res *RecipientList, err error) {
+func (s *Service) RecipientsRemove(envId string, rl *RecipientList) (res *RecipientList, err error) {
 	urlStr := fmt.Sprintf("envelopes/%s/recipients", envId)
-	err = s.do(ctx, "DELETE", urlStr, rl, &res)
+	err = s.do("DELETE", urlStr, rl, &res)
 	return
 }
 
 // RecipientTabs
 // RestApiDocumentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Get%20Tab%20Information%20for%20a%20Recipient.htm
-func (s *Service) RecipientTabs(ctx context.Context, envId string, recipId string) (res *Tabs, err error) {
+func (s *Service) RecipientTabs(envId string, recipId string) (res *Tabs, err error) {
 	urlStr := fmt.Sprintf("envelopes/%s/recipients/%s/tabs", envId, recipId)
-	err = s.do(ctx, "GET", urlStr, nil, &res)
+	err = s.do("GET", urlStr, nil, &res)
 	return
 }
 
@@ -537,9 +521,9 @@ func (s *Service) RecipientTabs(ctx context.Context, envId string, recipId strin
 // an error code and message. If ErrorDetails is nil, then the operation was successful for that item.
 // RestApiDocumentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Add%20Tabs%20for%20a%20Recipient.htm
-func (s *Service) RecipientTabsAdd(ctx context.Context, envId string, recipId string, tb *Tabs) (res *Tabs, err error) {
+func (s *Service) RecipientTabsAdd(envId string, recipId string, tb *Tabs) (res *Tabs, err error) {
 	urlStr := fmt.Sprintf("envelopes/%s/recipients/%s/tabs", envId, recipId)
-	err = s.do(ctx, "POST", urlStr, tb, &res)
+	err = s.do("POST", urlStr, tb, &res)
 	return
 }
 
@@ -548,9 +532,9 @@ func (s *Service) RecipientTabsAdd(ctx context.Context, envId string, recipId st
 // and the tabId must be included.
 // RestApiDocumentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Modify%20Tabs%20for%20a%20Recipient.htm
-func (s *Service) RecipientTabsModify(ctx context.Context, envId string, recipId string, tb *Tabs) (res *Tabs, err error) {
+func (s *Service) RecipientTabsModify(envId string, recipId string, tb *Tabs) (res *Tabs, err error) {
 	urlStr := fmt.Sprintf("envelopes/%s/recipients/%s/tabs", envId, recipId)
-	err = s.do(ctx, "PUT", urlStr, tb, &res)
+	err = s.do("PUT", urlStr, tb, &res)
 	return
 }
 
@@ -559,9 +543,9 @@ func (s *Service) RecipientTabsModify(ctx context.Context, envId string, recipId
 // an error node with an errorCode and message.
 // RestApiDocumentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Delete%20Recipients%20from%20an%20Envelope.htm
-func (s *Service) RecipientTabsRemove(ctx context.Context, envId string, recipId string, tb *Tabs) (res *Tabs, err error) {
+func (s *Service) RecipientTabsRemove(envId string, recipId string, tb *Tabs) (res *Tabs, err error) {
 	urlStr := fmt.Sprintf("envelopes/%s/recipients/%s/tabs", envId, recipId)
-	err = s.do(ctx, "DELETE", urlStr, tb, &res)
+	err = s.do("DELETE", urlStr, tb, &res)
 	return
 }
 
@@ -572,7 +556,7 @@ func (s *Service) RecipientTabsRemove(ctx context.Context, envId string, recipId
 // shared_by_me={true/false}
 // RestApiDocumentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Get%20List%20of%20Templates.htm
-func (s *Service) TemplateSearch(ctx context.Context, args ...TemplateSearchParam) (res *FolderTemplateList, err error) {
+func (s *Service) TemplateSearch(args ...TemplateSearchParam) (res *FolderTemplateList, err error) {
 	q := make(url.Values)
 	for _, nv := range args {
 		q.Add(nv.Name, nv.Value)
@@ -582,7 +566,7 @@ func (s *Service) TemplateSearch(ctx context.Context, args ...TemplateSearchPara
 		queryStr = "?" + q.Encode()
 	}
 	urlStr := "templates" + queryStr
-	err = s.do(ctx, "GET", urlStr, nil, &res)
+	err = s.do("GET", urlStr, nil, &res)
 	return
 }
 
@@ -661,7 +645,7 @@ var TemplateSearchNotSharedByMe = TemplateSearchParam{Name: "shared_by_me", Valu
 //
 // RestApiDocumentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Post%20Envelope%20Correction.htm
-func (s *Service) EnvelopeCorrection(ctx context.Context, envId string, retUrlType ReturnUrlType, suppressNavigation bool) (res *EnvUrl, err error) {
+func (s *Service) EnvelopeCorrection(envId string, retUrlType ReturnUrlType, suppressNavigation bool) (res *EnvUrl, err error) {
 	var correctType struct {
 		Type ReturnUrlType `json:"returnUrl"`
 		Nav  string        `json:"suppressNavigation,omitempty"`
@@ -671,7 +655,7 @@ func (s *Service) EnvelopeCorrection(ctx context.Context, envId string, retUrlTy
 		correctType.Nav = "true"
 	}
 	urlStr := fmt.Sprintf("envelopes/%s/views/correct", envId)
-	err = s.do(ctx, "POST", urlStr, &correctType, &res)
+	err = s.do("POST", urlStr, &correctType, &res)
 	return
 }
 
@@ -679,9 +663,9 @@ func (s *Service) EnvelopeCorrection(ctx context.Context, envId string, retUrlTy
 //
 // RestApiDocumentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Post%20Recipient%20View.htm
-func (s *Service) RecipientView(ctx context.Context, envId string, er *EnvRecipientView) (res *EnvUrl, err error) {
+func (s *Service) RecipientView(envId string, er *EnvRecipientView) (res *EnvUrl, err error) {
 	urlStr := fmt.Sprintf("envelopes/%s/views/recipient", envId)
-	err = s.do(ctx, "POST", urlStr, er, &res)
+	err = s.do("POST", urlStr, er, &res)
 	return
 }
 
@@ -689,10 +673,10 @@ func (s *Service) RecipientView(ctx context.Context, envId string, er *EnvRecipi
 //
 // RestApiDocumentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Post%20Sender%20View.htm
-func (s *Service) SenderView(ctx context.Context, envId string, retType ReturnUrlType) (res *EnvUrl, err error) {
+func (s *Service) SenderView(envId string, retType ReturnUrlType) (res *EnvUrl, err error) {
 	payload := &returnUrlStruct{ReturnUrl: retType}
 	urlStr := fmt.Sprintf("envelopes/%s/views/sender", envId)
-	err = s.do(ctx, "POST", urlStr, payload, &res)
+	err = s.do("POST", urlStr, payload, &res)
 	return
 }
 
@@ -700,10 +684,10 @@ func (s *Service) SenderView(ctx context.Context, envId string, retType ReturnUr
 //
 // RestApiDocumentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Post%20Edit%20View.htm
-func (s *Service) EditView(ctx context.Context, envId string, retType ReturnUrlType) (res *EnvUrl, err error) {
+func (s *Service) EditView(envId string, retType ReturnUrlType) (res *EnvUrl, err error) {
 	payload := &returnUrlStruct{ReturnUrl: retType}
 	urlStr := fmt.Sprintf("envelopes/%s/views/edit", envId)
-	err = s.do(ctx, "POST", urlStr, payload, &res)
+	err = s.do("POST", urlStr, payload, &res)
 	return
 }
 
@@ -711,9 +695,9 @@ func (s *Service) EditView(ctx context.Context, envId string, retType ReturnUrlT
 //
 // RestApiDocumentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Get%20List%20of%20Templates%20used%20in%20an%20Envelope.htm
-func (s *Service) EnvelopeTemplates(ctx context.Context, envId string) (res *TemplateList, err error) {
+func (s *Service) EnvelopeTemplates(envId string) (res *TemplateList, err error) {
 	urlStr := fmt.Sprintf("envelopes/%s/templates", envId)
-	err = s.do(ctx, "GET", urlStr, nil, &res)
+	err = s.do("GET", urlStr, nil, &res)
 	return
 }
 
@@ -721,11 +705,11 @@ func (s *Service) EnvelopeTemplates(ctx context.Context, envId string) (res *Tem
 //
 // RestApiDocumentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Move%20Envelope.htm
-func (s *Service) EnvelopeMove(ctx context.Context, toFolderId string, envIds ...string) (err error) {
+func (s *Service) EnvelopeMove(toFolderId string, envIds ...string) (err error) {
 	data := map[string]interface{}{"envelopeIds": envIds}
 	var retData interface{}
 	urlStr := fmt.Sprintf("folders/%s", toFolderId)
-	err = s.do(ctx, "PUT", urlStr, data, &retData)
+	err = s.do("PUT", urlStr, data, &retData)
 	return
 }
 
@@ -733,8 +717,8 @@ func (s *Service) EnvelopeMove(ctx context.Context, toFolderId string, envIds ..
 //
 // RestApiDocumentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Get List of Account Custom Fields.htm
-func (s *Service) AccountCustomFields(ctx context.Context) (res *CustomFieldList, err error) {
-	err = s.do(ctx, "GET", "custom_fields", nil, &res)
+func (s *Service) AccountCustomFields() (res *CustomFieldList, err error) {
+	err = s.do("GET", "custom_fields", nil, &res)
 	return
 }
 
@@ -742,8 +726,8 @@ func (s *Service) AccountCustomFields(ctx context.Context) (res *CustomFieldList
 //
 // RestApiDocumentation
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Get Template.htm
-func (s *Service) GetTemplate(ctx context.Context, id string) (res *Template, err error) {
+func (s *Service) GetTemplate(id string) (res *Template, err error) {
 	urlStr := fmt.Sprintf("templates/%s", id)
-	err = s.do(ctx, "GET", urlStr, nil, &res)
+	err = s.do("GET", urlStr, nil, &res)
 	return
 }

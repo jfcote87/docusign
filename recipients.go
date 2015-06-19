@@ -18,12 +18,30 @@ type RecipientList struct {
 	RecipientCount      string              `json:"recipientCount,omitempty"`
 }
 
+// Values returns a NmVal slice contiaing the
+// tabLabel and value for each tab in the RecipientList.
+func (r RecipientList) Values() []NmVal {
+	v := make([]NmVal, 0)
+	for _, x := range r.InPersonSigners {
+		v = append(v, x.Tabs.Values()...)
+	}
+	for _, x := range r.Signers {
+		v = append(v, x.Tabs.Values()...)
+	}
+	return v
+}
+
+// EmailNotification contains the email message sent to a
+// recipient.  If not set, the envelopes EmailBlurb and
+// EmailSubject are used.
 type EmailNotification struct {
 	EmailBody         string `json:"emailBody,omitempty"`
 	EmailSubject      string `json:"emailSubject,omitempty"`
 	SupportedLanguage string `json:"supportedLanguage,omitempty"`
 }
 
+// IDCheckInformationInput specifies authentication check by name. See api
+// documentation for specific values.
 type IDCheckInformationInput struct {
 	AddressInformationInput *AddressInformationInput `json:"addressInformationInput,omitempty"`
 	DobInformationInput     *DobInformationInput     `json:"dobInformationInput,omitempty"`
@@ -76,6 +94,8 @@ type SamlAuthentication struct {
 	SamlAssertionAttributes []NmVal `json:"samlAssertionAttributes,omitempty"`
 }
 
+// RecipientAttachement will be used to a specific file attachment
+// for a recipient.
 type RecipientAttachment struct {
 	Label          string `json:"label,omitempty"`
 	AttachmentType string `json:"attachmentType,omitempty"`

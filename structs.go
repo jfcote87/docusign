@@ -254,13 +254,13 @@ type EventNotification struct {
 }
 
 type EnvelopeEvent struct {
-	EnvelopeEventStatusCode string `json:"envelopeEventStatusCode,omitempty"`
-	IncludeDocuments        string `json:"includeDocuments,omitempty"`
+	StatusCode       string `json:"envelopeEventStatusCode,omitempty"`
+	IncludeDocuments string `json:"includeDocuments,omitempty"`
 }
 
 type RecipientEvent struct {
-	RecipientEventStatusCode string `json:"RecipientEventStatusCode,omitempty"`
-	IncludeDocuments         string `json:"includeDocuments,omitempty"`
+	StatusCode       string `json:"recipientEventStatusCode,omitempty"`
+	IncludeDocuments string `json:"includeDocuments,omitempty"`
 }
 
 // Documentation: https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Add%20Email%20Setting%20Overrides%20to%20an%20Envelope.htm
@@ -331,11 +331,13 @@ type DocumentAssetList struct {
 }
 
 type LoginInfo struct {
-	ApiPassword string `json:"apiPassword,omitempty"`
+	ApiPassword   string         `json:"apiPassword,omitempty"`
+	LoginAccounts []LoginAccount `json:"loginAccounts"`
 }
 
 type LoginAccount struct {
 	AccountId            string  `json:"accountId,omitempty"`
+	AccountIdGuid        string  `json:"accountIdGuid,omitempty"`
 	BaseUrl              string  `json:"baseUrl,omitempty"`
 	Email                string  `json:"email,omitempty"`
 	IsDefault            string  `json:"isDefault,omitempty"`
@@ -381,7 +383,9 @@ type Template struct {
 	EnforceSignerVisibility    string             `json:"enforceSignerVisibility,omitempty"`
 	EnvelopeIdStamping         string             `json:"envelopeIdStamping,omitempty"`
 	MessageLock                string             `json:"messageLock,omitempty"`
+	Name                       string             `json:"name,omitempty"`
 	Notification               *Notification      `json:"notification,omitempty"`
+	Owner                      *TemplateOwner     `json:"owner,omitempty"`
 	RecipientsLock             string             `json:"recipientsLock,omitempty"`
 	SigningLocation            string             `json:"signingLocation,omitempty"`
 	CustomFields               *CustomFieldList   `json:"customFields,omitempty"`

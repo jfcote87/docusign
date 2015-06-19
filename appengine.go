@@ -5,7 +5,7 @@
 
 // +build appengine appenginevm
 
-// App Engine hooks.
+// App Engine hooks borrowed from golang.org/x/oauth2
 
 package docusign
 
@@ -17,6 +17,7 @@ import (
 )
 
 func init() {
+	// register contextClientAppengine so that urlfetch is used by default.
 	registerContextClientFunc(contextClientAppEngine)
 }
 
