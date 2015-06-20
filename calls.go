@@ -142,18 +142,48 @@ func EnvelopeSearchToDate(tm time.Time) SearchFolderParam {
 	return SearchFolderParam{Name: "to_date", Value: DsQueryTimeFormat(tm)}
 }
 
-var EnvelopeSearchOrderByActionRequired = SearchFolderParam{Name: "order_by", Value: "action_required"}
-var EnvelopeSearchOrderByCreated = SearchFolderParam{Name: "order_by", Value: "created"}
-var EnvelopeSearchOrderByCompleted = SearchFolderParam{Name: "order_by", Value: "completed"}
-var EnvelopeSearchOrderBySent = SearchFolderParam{Name: "order_by", Value: "sent"}
-var EnvelopeSearchOrderBySignerList = SearchFolderParam{Name: "order_by", Value: "signer_list"}
-var EnvelopeSearchOrderByStatus = SearchFolderParam{Name: "order_by", Value: "status"}
-var EnvelopeSearchOrderBySubject = SearchFolderParam{Name: "order_by", Value: "subject"}
+var EnvelopeSearchOrderByActionRequired = SearchFolderParam{
+	Name:  "order_by",
+	Value: "action_required",
+}
+var EnvelopeSearchOrderByCreated = SearchFolderParam{
+	Name:  "order_by",
+	Value: "created",
+}
+var EnvelopeSearchOrderByCompleted = SearchFolderParam{
+	Name:  "order_by",
+	Value: "completed",
+}
+var EnvelopeSearchOrderBySent = SearchFolderParam{
+	Name:  "order_by",
+	Value: "sent",
+}
+var EnvelopeSearchOrderBySignerList = SearchFolderParam{
+	Name:  "order_by",
+	Value: "signer_list",
+}
+var EnvelopeSearchOrderByStatus = SearchFolderParam{
+	Name:  "order_by",
+	Value: "status",
+}
+var EnvelopeSearchOrderBySubject = SearchFolderParam{
+	Name:  "order_by",
+	Value: "subject",
+}
 
-var EnvelopeSearchOrderAsc = SearchFolderParam{Name: "order", Value: "asc"}
-var EnvelopeSearchOrderDesc = SearchFolderParam{Name: "order", Value: "desc"}
+var EnvelopeSearchOrderAsc = SearchFolderParam{
+	Name:  "order",
+	Value: "asc",
+}
+var EnvelopeSearchOrderDesc = SearchFolderParam{
+	Name:  "order",
+	Value: "desc",
+}
 
-var EnvelopeSearchIncludeRecipients = SearchFolderParam{Name: "include_recipients", Value: "true"}
+var EnvelopeSearchIncludeRecipients = SearchFolderParam{
+	Name:  "include_recipients",
+	Value: "true",
+}
 
 // EnvelopeAuditEvents returns the events for this envelope.
 //
@@ -244,7 +274,10 @@ func (s *Service) EnvelopeDocument(outputBuffer io.Writer, envId string, docId s
 
 type EnvelopeDocumentParam NmVal
 
-var EnvelopeDocumentShowChanges = EnvelopeDocumentParam{Name: "show_changes", Value: "true"}
+var EnvelopeDocumentShowChanges = EnvelopeDocumentParam{
+	Name:  "show_changes",
+	Value: "true",
+}
 
 // EnvelopeDocumentsCombined retrieves a PDF containing the combined content of all documents
 // and the certificate. If the account has the Highlight Data Changes feature enabled,
@@ -270,9 +303,18 @@ func (s *Service) EnvelopeDocumentsCombined(outputBuffer io.Writer, envId string
 
 type EnvelopeDocumentsCombinedParam NmVal
 
-var EnvelopeDocumentsCombinedCert = EnvelopeDocumentsCombinedParam{Name: "certificate", Value: "true"}
-var EnvelopeDocumentCombinedShowChanges = EnvelopeDocumentsCombinedParam{Name: "show_changes", Value: "true"}
-var EnvelopeDocumentsCombinedWatermark = EnvelopeDocumentsCombinedParam{Name: "watermark", Value: "true"}
+var EnvelopeDocumentsCombinedCert = EnvelopeDocumentsCombinedParam{
+	Name:  "certificate",
+	Value: "true",
+}
+var EnvelopeDocumentCombinedShowChanges = EnvelopeDocumentsCombinedParam{
+	Name:  "show_changes",
+	Value: "true",
+}
+var EnvelopeDocumentsCombinedWatermark = EnvelopeDocumentsCombinedParam{
+	Name:  "watermark",
+	Value: "true",
+}
 
 // LoginInformation determine if a user is authenticated and to choose the account to be used
 // for other operations. Each account associated with the login credentials is listed.
@@ -297,10 +339,22 @@ func (s *Service) LoginInformation(args ...LoginInfoParam) (li *LoginInfo, err e
 
 type LoginInfoParam NmVal
 
-var LoginInformationIncludeApiPassword = LoginInfoParam{Name: "api_password", Value: "true"}
-var LoginInformationAcctGUID = LoginInfoParam{Name: "include_account_id_guid", Value: "true"}
-var LoginInformationSettingsAll = LoginInfoParam{Name: "login_settings", Value: "all"}
-var LoginInformationSettingsNone = LoginInfoParam{Name: "login_settings", Value: "none"}
+var LoginInformationIncludeApiPassword = LoginInfoParam{
+	Name:  "api_password",
+	Value: "true",
+}
+var LoginInformationAcctGUID = LoginInfoParam{
+	Name:  "include_account_id_guid",
+	Value: "true",
+}
+var LoginInformationSettingsAll = LoginInfoParam{
+	Name:  "login_settings",
+	Value: "all",
+}
+var LoginInformationSettingsNone = LoginInfoParam{
+	Name:  "login_settings",
+	Value: "none",
+}
 
 // EnvelopeCreate adds an envelope.  The Status field determines whether the envelope is saved as a Draft
 // or sent.
@@ -457,9 +511,18 @@ func (s *Service) Recipients(envId string, args ...RecipientsParam) (res *Recipi
 
 type RecipientsParam NmVal
 
-var RecipientsIncludeTabs = RecipientsParam{Name: "include_tabs", Value: "true"}
-var RecipientsIncludeExtended = RecipientsParam{Name: "include_extended", Value: "true"}
-var RecipientsResend = RecipientsParam{Name: "resend_envelope", Value: "true"}
+var RecipientsIncludeTabs = RecipientsParam{
+	Name:  "include_tabs",
+	Value: "true",
+}
+var RecipientsIncludeExtended = RecipientsParam{
+	Name:  "include_extended",
+	Value: "true",
+}
+var RecipientsResend = RecipientsParam{
+	Name:  "resend_envelope",
+	Value: "true",
+}
 
 // RecipientsAdd
 // If an error occurred during the operation, recipient struct will contain an ErrorDetail
@@ -629,18 +692,48 @@ func TemplateSearchSearch(searchText string) TemplateSearchParam {
 	return TemplateSearchParam{Name: "search_text", Value: searchText}
 }
 
-var TemplateSearchOrderAsc = TemplateSearchParam{Name: "order", Value: "asc"}
-var TemplateSearchOrderDesc = TemplateSearchParam{Name: "order", Value: "desc"}
+var TemplateSearchOrderAsc = TemplateSearchParam{
+	Name:  "order",
+	Value: "asc",
+}
+var TemplateSearchOrderDesc = TemplateSearchParam{
+	Name:  "order",
+	Value: "desc",
+}
 
-var TemplateSearchOrderByName = TemplateSearchParam{Name: "orderby", Value: "name"}
-var TemplateSearchOrderByModified = TemplateSearchParam{Name: "orderby", Value: "modified"}
-var TemplateSearchOrderByUsed = TemplateSearchParam{Name: "orderby", Value: "used"}
+var TemplateSearchOrderByName = TemplateSearchParam{
+	Name:  "orderby",
+	Value: "name",
+}
+var TemplateSearchOrderByModified = TemplateSearchParam{
+	Name:  "orderby",
+	Value: "modified",
+}
+var TemplateSearchOrderByUsed = TemplateSearchParam{
+	Name:  "orderby",
+	Value: "used",
+}
 
-var TemplateSearchFilterOwned = TemplateSearchParam{Name: "user_filter", Value: "owned_by_me"}
-var TemplateSearchFilterSharedWithMe = TemplateSearchParam{Name: "user_filter", Value: "shared_with_me"}
-var TemplateSearchFilterAll = TemplateSearchParam{Name: "user_filter", Value: "all"}
-var TemplateSearchSharedByMe = TemplateSearchParam{Name: "shared_by_me", Value: "true"}
-var TemplateSearchNotSharedByMe = TemplateSearchParam{Name: "shared_by_me", Value: "false"}
+var TemplateSearchFilterOwned = TemplateSearchParam{
+	Name:  "user_filter",
+	Value: "owned_by_me",
+}
+var TemplateSearchFilterSharedWithMe = TemplateSearchParam{
+	Name:  "user_filter",
+	Value: "shared_with_me",
+}
+var TemplateSearchFilterAll = TemplateSearchParam{
+	Name:  "user_filter",
+	Value: "all",
+}
+var TemplateSearchSharedByMe = TemplateSearchParam{
+	Name:  "shared_by_me",
+	Value: "true",
+}
+var TemplateSearchNotSharedByMe = TemplateSearchParam{
+	Name:  "shared_by_me",
+	Value: "false",
+}
 
 // EnvelopeCorrection returns a URL to start the correction view of the DocuSign UI.
 //
