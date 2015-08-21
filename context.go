@@ -31,6 +31,7 @@ func registerContextClientFunc(fn contextClientFunc) {
 type ContextSetting struct {
 	Client         *http.Client
 	Endpoint       string
+	IsDemo         bool
 	LogRawRequest  func(context.Context, string, ...interface{})
 	LogRawResponse func(context.Context, string, ...interface{})
 }

@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"golang.org/x/net/context"
+	"golang.org/x/net/context/ctxhttp"
 )
 
 const (
@@ -239,6 +240,7 @@ func (s Service) newRequest(method, urlStr string, body io.Reader) (*http.Reques
 // UseDemoServer returns a Context that ensures that calls are made to Docusign's demo server.
 func UseDemoServer(logRequest, logResponse func(context.Context, string, ...interface{})) context.Context {
 	demoSettings := &ContextSetting{
+		IsDemo:         true,
 		Endpoint:       testUrl,
 		LogRawRequest:  logRequest,
 		LogRawResponse: logResponse,
@@ -368,26 +370,33 @@ func (s *Service) doPdf(outputWriter io.Writer, method string, urlStr string, pa
 	}
 	s.credential.Authorize(req)
 
-	resCh := make(chan error)
-	go func() {
-		res, err := s.client.Do(req)
-		if err == nil {
-			if err = checkResponseStatus(res); err == nil {
-				defer res.Body.Close()
-				_, err = io.Copy(outputWriter, res.Body)
-			}
+	res, err := ctxhttp.Do(s.ctx, s.client, req)
+	if err == nil {
+		if err = checkResponseStatus(res); err == nil {
+			defer res.Body.Close()
+			_, err = io.Copy(outputWriter, res.Body)
 		}
-		resCh <- err
-	}()
-
-	select {
-	case <-s.ctx.Done():
-		err = s.ctx.Err()
-		if t, ok := s.client.Transport.(canceler); ok {
-			t.CancelRequest(req)
-		}
-	case err = <-resCh:
 	}
+	//resCh := make(chan error)
+	//go func() {
+	//	res, err := s.client.Do(req)
+	//	if err == nil {
+	//		if err = checkResponseStatus(res); err == nil {
+	//			defer res.Body.Close()
+	//			_, err = io.Copy(outputWriter, res.Body)
+	//		}
+	//	}
+	//	resCh <- err
+	//}()
+
+	//select {
+	//case <-s.ctx.Done():
+	//	err = s.ctx.Err()
+	//	if t, ok := s.client.Transport.(canceler); ok {
+	//		t.CancelRequest(req)
+	//	}
+	//case err = <-resCh:
+	//}
 	return err
 }
 
@@ -399,6 +408,13 @@ func (s *Service) do(method string, urlStr string, payload interface{}, returnVa
 	var err error
 	if len(files) > 0 {
 		body, contentType = multiBody(payload, files)
+		if s.logRawRequest != nil {
+			if bz, err := json.MarshalIndent(payload, "", "    "); err == nil {
+				s.logRawRequest(s.ctx, "Request Body: %s", string(bz))
+			}
+
+		}
+
 	} else if payload != nil {
 		// Prepare body
 		var b []byte
@@ -438,36 +454,54 @@ func (s *Service) do(method string, urlStr string, payload interface{}, returnVa
 		}
 
 	}
-	resCh := make(chan error)
-	go func() {
-		res, err := s.client.Do(req)
-		if err == nil {
-			if err = checkResponseStatus(res); err == nil {
-				defer res.Body.Close()
-				if s.logRawResponse != nil {
-					var b []byte
-					if b, err = ioutil.ReadAll(res.Body); err == nil {
-						s.logRawResponse(s.ctx, "%s", string(b))
-						err = json.Unmarshal(b, returnValue)
-					}
-				} else {
-					err = json.NewDecoder(res.Body).Decode(returnValue)
+	res, err := ctxhttp.Do(s.ctx, s.client, req)
+	if err == nil {
+		if err = checkResponseStatus(res); err == nil {
+			defer res.Body.Close()
+			if s.logRawResponse != nil {
+				var b []byte
+				if b, err = ioutil.ReadAll(res.Body); err == nil {
+					s.logRawResponse(s.ctx, "%s", string(b))
+					err = json.Unmarshal(b, returnValue)
 				}
+			} else {
+				err = json.NewDecoder(res.Body).Decode(returnValue)
 			}
 		}
-		resCh <- err
-		close(resCh)
-	}()
-
-	select {
-	case <-s.ctx.Done():
-		err = s.ctx.Err()
-		if t, ok := s.client.Transport.(canceler); ok {
-			t.CancelRequest(req)
-		}
-	case err = <-resCh:
 	}
 	return err
+	/*
+
+		resCh := make(chan error)
+		go func() {
+			res, err := s.client.Do(req)
+			if err == nil {
+				if err = checkResponseStatus(res); err == nil {
+					defer res.Body.Close()
+					if s.logRawResponse != nil {
+						var b []byte
+						if b, err = ioutil.ReadAll(res.Body); err == nil {
+							s.logRawResponse(s.ctx, "%s", string(b))
+							err = json.Unmarshal(b, returnValue)
+						}
+					} else {
+						err = json.NewDecoder(res.Body).Decode(returnValue)
+					}
+				}
+			}
+			resCh <- err
+			close(resCh)
+		}()
+
+		select {
+		case <-s.ctx.Done():
+			err = s.ctx.Err()
+			if t, ok := s.client.Transport.(canceler); ok {
+				t.CancelRequest(req)
+			}
+		case err = <-resCh:
+		}
+		return err */
 }
 
 type canceler interface {

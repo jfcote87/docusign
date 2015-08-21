@@ -50,7 +50,6 @@ func TestMain(m *testing.M) {
 }
 
 func TestCalls(t *testing.T) {
-
 	ctx := UseDemoServer(nil, nil)
 	ctx = context.WithValue(ctx, HTTPClient, http.DefaultClient)
 
@@ -145,11 +144,7 @@ func TestCalls(t *testing.T) {
 		return
 	}
 
-	//STOP HERE
-	return
-
 	testEnv := testEnvelopePayload(cfg.UserName)
-
 	file, err := os.Open("testdata/TestDocument.pdf")
 	if err != nil {
 		t.Errorf("Unable to open TestDocument.pdf: %v", err)
@@ -168,6 +163,9 @@ func TestCalls(t *testing.T) {
 		return
 	}
 	testEnvId = ex.EnvelopeId
+	t.Logf("Envelope: %s", testEnvId)
+
+	return
 
 	aTab := &Tabs{
 		SignerAttachmentTabs: []SignerAttachmentTab{
@@ -317,7 +315,6 @@ func TestCalls(t *testing.T) {
 
 	for i := range newRecipients.Signers {
 		if newRecipients.Signers[i].RecipientId == "3" {
-			fmt.Printf("Here\n")
 			newRecipients.Signers[i].Name = "Modified Name"
 		}
 	}

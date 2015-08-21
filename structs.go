@@ -42,7 +42,7 @@ type EnvRecipientView struct {
 	ClientUserId          string        `json:"clientUserId,omitempty"`
 	AuthenticationMethod  string        `json:"authenticationMethod,omitempty"`
 	AssertionId           string        `json:"assertionId,omitempty"`
-	AuthenticationInstant string        `json:"authenticationInstant,omitempty"`
+	AuthenticationInstant time.Time     `json:"authenticationInstant,omitempty"`
 	SecurityDomain        string        `json:"securityDomain,omitempty"`
 	Email                 string        `json:"email,omitempty"`
 	UserId                string        `json:"userId,omitempty"`
@@ -189,7 +189,7 @@ type CustomField struct {
 	Required     string         `json:"required,omitempty"`
 	Show         string         `json:"show,omitempty"`
 	Value        string         `json:"value,omitempty"`
-	ErrorDetails *ResponseError `json:errorDetails,omitempty"`
+	ErrorDetails *ResponseError `json:"errorDetails,omitempty"`
 }
 
 type ListCustomField struct {
