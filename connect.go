@@ -58,6 +58,7 @@ type EnvelopeStatusXml struct {
 	AutoNavigation     bool                 `xml:"AutoNavigation" json:"autoNavigation,omitempty"`
 	EnvelopeIdStamping bool                 `xml:"EnvelopeIdStamping" json:"envelopeIdStamping,omitempty"`
 	AuthoritativeCopy  bool                 `xml:"AuthoritativeCopy" json:"authoritativeCopy,omitempty"`
+	VoidReason         string               `xml:"VoidReason" json:"voidReason,omitempty"`
 	RecipientStatuses  []RecipientStatusXml `xml:"RecipientStatuses>RecipientStatus" json:"recipientStatuses,omitempty"`
 	CustomFields       []CustomFieldXml     `xml:"CustomFields>CustomField" json:"customFields,omitempty"`
 	DocumentStatuses   []DocumentStatusXml  `xml:"DocumentStatuses>DocumentStatus" json:"documentStatuses,omitempty"`

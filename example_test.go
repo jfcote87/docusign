@@ -17,12 +17,13 @@ func ExampleConfig() {
 		Password:      "YOUR_PASSWORD",
 		IntegratorKey: "YOUR_INTEGRATOR_KEY",
 		AccountId:     "YOUR_ACCOUNT_ID",
+		IsDemoAccount: true,
 	}
 
 	// create service using config as credential
-	sv := docusign.New(ctx, config)
+	sv := docusign.New(config, "")
 
-	folderList, err := sv.FolderList(docusign.FolderTemplatesInclude)
+	folderList, err := sv.FolderList(ctx, docusign.FolderTemplatesInclude)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -41,14 +42,14 @@ func ExampleConfig() {
 func ExampleOauthCredential() {
 	ctx := context.Background()
 	cred := &docusign.OauthCredential{
-		AccessToken:    "SAVED_ACCESS_TOKEN",
-		AccountId:      "YOUR_ACCOUNT_ID",
-		OnBehalfOfUser: "USER_TO_IMPERSONATE",
+		AccessToken: "SAVED_ACCESS_TOKEN",
+		AccountId:   "YOUR_ACCOUNT_ID",
+		TokenType:   "bearer",
 	}
 
-	sv := docusign.New(ctx, cred)
+	sv := docusign.New(cred, "")
 
-	results, err := sv.EnvelopeSearch(docusign.SearchFolderCompleted,
+	results, err := sv.EnvelopeSearch(ctx, docusign.SearchFolderCompleted,
 		docusign.EnvelopeSearchFromDate(time.Now().Add(-time.Hour*72)),
 		docusign.EnvelopeSearchIncludeRecipients)
 	if err != nil {
@@ -59,23 +60,18 @@ func ExampleOauthCredential() {
 	}
 }
 
-func ExampleUseDemoServer(cred docusign.Credential, tempId string) {
-	logRaw := func(ctx context.Context, fmt string, args ...interface{}) {
-		log.Printf(fmt, args...)
-	}
-
-	ctx := docusign.UseDemoServer(logRaw, logRaw)
-	sv := docusign.New(ctx, cred)
-
-	template, err := sv.GetTemplate(tempId)
+func ExampleOnBehalfOf(ctx context.Context, sv *docusign.Service, userEmail string) (string, error) {
+	info, err := sv.OnBehalfOf(userEmail).LoginInformation(ctx,
+		docusign.LoginInformationSettingsAll,
+		docusign.LoginInformationIncludeApiPassword)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
-	fmt.Printf("Template Name: %s\n", template.Name)
+	return info.LoginAccounts[0].Name, nil
+
 }
 
-func ExampleEnvelopeCreate(sv *docusign.Service) {
-
+func ExampleEnvelopeCreate(ctx context.Context, sv *docusign.Service, userID string) {
 	f, err := os.Open("FILE_NAME")
 	if err != nil {
 		log.Fatal(err)
@@ -177,10 +173,10 @@ func ExampleEnvelopeCreate(sv *docusign.Service) {
 		},
 	}
 
-	resp, err := sv.EnvelopeCreate(env, &uploadDoc)
+	newEnvelope, err := sv.OnBehalfOf(userID).EnvelopeCreate(ctx, env, &uploadDoc)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("EnvelopeID: %s\n", resp.EnvelopeId)
+	fmt.Printf("EnvelopeID: %s\n", newEnvelope.EnvelopeId)
 
 }

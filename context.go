@@ -8,10 +8,36 @@ package docusign
 // Logic for obtaining client via the a golang.org/x/net/context Context.
 // Code copied from golang.org/x/oauth2
 import (
+	"bytes"
+	"io"
+	"io/ioutil"
+	"log"
 	"net/http"
 
 	"golang.org/x/net/context"
 )
+
+// DefaultCtx is the default context you should supply if not using
+// your own context.Context (see https://golang.org/x/net/context).
+var DefaultCtx = context.Background()
+
+type ctxKeyHTTPClient struct{}
+type ctxKeyLogger struct{}
+
+// Logger provides a mechanism to log call made via a Service.
+// If a context has the docusign.CallLogger value set to a
+// Logger, any service call will log requests
+// using the interfaces functions.
+type Logger interface {
+	LogRequest(cxt context.Context, payload interface{}, req *http.Request)
+	// Log Response needs to return a duplicate io.Reader of the res.Body.
+	LogResponse(ctx context.Context, res *http.Response) io.Reader
+}
+
+// HTTPClient is the context key to use with golang.org/x/net/context's
+// WithValue function to associate an *http.Client value with a context.
+var HTTPClient ctxKeyHTTPClient
+var CallLogger ctxKeyLogger
 
 // contextClientFunc is a func which tries to return an *http.Client
 // given a Context value. If it returns an error, the search stops
@@ -25,18 +51,8 @@ func registerContextClientFunc(fn contextClientFunc) {
 	contextClientFuncs = append(contextClientFuncs, fn)
 }
 
-// ContextSetting provides default values for creating a new
-// docusing.Serivce.  If needed, a Context's docusign.APISettings
-// Value shoud be set.
-type ContextSetting struct {
-	Client         *http.Client
-	Endpoint       string
-	IsDemo         bool
-	LogRawRequest  func(context.Context, string, ...interface{})
-	LogRawResponse func(context.Context, string, ...interface{})
-}
-
-// contextClient returns the appropriate
+// contextClient returns the appropriate client for the
+// provided context.
 func contextClient(ctx context.Context) *http.Client {
 	if hc, ok := ctx.Value(HTTPClient).(*http.Client); ok {
 		return hc
@@ -53,32 +69,27 @@ func contextClient(ctx context.Context) *http.Client {
 	return http.DefaultClient
 }
 
-// contextSettings returns a ContextSetting from the context.
-func contextSettings(ctx context.Context) *ContextSetting {
-	if cs, ok := ctx.Value(APISettings).(*ContextSetting); ok {
-		if cs.Client == nil {
-			return &ContextSetting{Client: contextClient(ctx), Endpoint: cs.Endpoint, LogRawRequest: cs.LogRawRequest, LogRawResponse: cs.LogRawResponse}
-		}
-		return cs
+// contextLogger returns a Logger associated with the
+// provided context.
+func contextLogger(ctx context.Context) Logger {
+	if f, ok := ctx.Value(CallLogger).(Logger); ok {
+		return f
 	}
-	return &ContextSetting{Client: contextClient(ctx), Endpoint: liveUrl, LogRawRequest: nil, LogRawResponse: nil}
-
+	return nil
 }
 
-// HTTPClient is the context key to use with golang.org/x/net/context's
-// WithValue function to associate an *http.Client value with a context.
-var HTTPClient contextKey1
+type SimpleLogger struct{}
 
-// APIEndpoint is the context key to determine the endpoint (demo or live)
-// to use. If not set, the live version is assumed.
-var APISettings contextKey2
+func (s SimpleLogger) LogRequest(ctx context.Context, payload interface{}, req *http.Request) {
+	log.Printf("URL is %s, Payload: %#v", req.URL, payload)
+}
 
-// contextKeyX is just an empty struct. It exists so HTTPClient can be
-// an immutable public variable with a unique type. It's immutable
-// because nobody else can create a contextKey, being unexported.
-type contextKey1 struct{}
-type contextKey2 struct{}
-
-// DefaultCtx is the default context you should supply if not using
-// your own context.Context (see https://golang.org/x/net/context).
-var DefaultCtx = context.Background()
+func (s SimpleLogger) LogResponse(ctx context.Context, res *http.Response) io.Reader {
+	b, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Printf("Unable to read response: %v", res.Request.URL)
+		return &bytes.Reader{}
+	}
+	log.Printf("Received %d bytes: %s", res.ContentLength, string(b))
+	return bytes.NewReader(b)
+}

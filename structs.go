@@ -209,7 +209,7 @@ type Document struct {
 	EncryptedWithKeyManager string     `json:"encryptedWithKeyManager,omitempty"`
 	Pages                   string     `json:"pages,omitempty"`
 	FileExtension           string     `json:"fileExtension,omitempty"`
-	DocumentBase64          string     `json:"documentBase64,omitempty"`
+	DocumentBase64          []byte     `json:"documentBase64,omitempty"`
 	Matchboxes              []Matchbox `json:"matchboxes,omitempty"`
 }
 

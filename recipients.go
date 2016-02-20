@@ -104,7 +104,7 @@ type RecipientAttachment struct {
 }
 
 type SmsAuthentication struct {
-	senderProvidedNumbers []string `json:"smsAuthentication,omitempty"`
+	SenderProvidedNumbers []string `json:"smsAuthentication,omitempty"`
 }
 
 // Recipient contains the common fields for all recipient types

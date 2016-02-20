@@ -43,59 +43,56 @@ var testTemplateId string
 
 var testCtx context.Context
 
-func TestMain(m *testing.M) {
-	testCtx = UseDemoServer(nil, nil)
-	testCtx = context.WithValue(testCtx, HTTPClient, http.DefaultClient)
-	os.Exit(m.Run())
-}
-
 func TestCalls(t *testing.T) {
-	ctx := UseDemoServer(nil, nil)
-	ctx = context.WithValue(ctx, HTTPClient, http.DefaultClient)
+	ctx := context.WithValue(context.Background(), HTTPClient, http.DefaultClient)
 
 	testEnvId = os.Getenv("DOCUSIGN_TESTENVID")
 	testTemplateId = os.Getenv("DOCUSIGN_TEMPLATEID")
+	testToken := os.Getenv("DOCUSIGN_TOKEN")
 
+	testTemplateId = "321d2832-1244-48f7-a6db-949c2cd319c0"
 	cfg := &Config{
 		UserName:      os.Getenv("DOCUSIGN_USERNAME"),
 		Password:      os.Getenv("DOCUSIGN_PASSWORD"),
 		IntegratorKey: os.Getenv("DOCUSIGN_APIKEY"),
 		AccountId:     os.Getenv("DOCUSIGN_ACCTID"),
+		IsDemoAccount: true,
 	}
+	cfg.UserName = "0ba0d798-49ca-43c3-88dc-840d6bcb37af"
+	cfg.Password = "1DLfrdLa/68U4uzty+pAhM3TUTg="
 
 	if cfg.UserName == "" || cfg.Password == "" || cfg.IntegratorKey == "" || cfg.AccountId == "" {
 		t.Errorf("Invalid Config")
 		return
-
 	}
 	var err error
-	testToken := os.Getenv("DOCUSIGN_TOKEN")
 	var c *OauthCredential
 
 	if testToken > "" {
-		c = &OauthCredential{AccessToken: testToken, AccountId: cfg.AccountId}
+		c = &OauthCredential{AccessToken: testToken, AccountId: cfg.AccountId, IsDemoAccount: true}
 	} else {
+
 		c, err = cfg.OauthCredential(ctx)
 		if err != nil {
 			t.Errorf("Ouauth2 token fail: %v", err)
 			return
 		}
-		t.Logf("Token: %s\n", c.AccessToken)
+		t.Logf("Token: %#v\n", c)
 		defer func() {
 			if err := c.Revoke(ctx); err != nil {
 				t.Errorf("Revoke token failed: %v", err)
 			}
 		}()
 	}
-	sv := New(ctx, c)
+	sv := New(c, "")
 
-	_, err = sv.GetTemplate(testTemplateId)
+	_, err = sv.GetTemplate(ctx, testTemplateId)
 	if err != nil {
 		t.Errorf("GetTemplate: %v", err)
 		return
 	}
 
-	r, err := sv.TemplateSearch()
+	r, err := sv.TemplateSearch(ctx)
 	if err != nil {
 		t.Errorf("TemplateSearch: %v", err)
 		return
@@ -107,7 +104,7 @@ func TestCalls(t *testing.T) {
 
 	// Get Draft Folder
 	var draftFolder string
-	fl, err := sv.FolderList(FolderTemplatesInclude)
+	fl, err := sv.FolderList(ctx, FolderTemplatesInclude)
 	if err != nil {
 		t.Errorf("GetFolderList: %v", err)
 		return
@@ -122,14 +119,14 @@ func TestCalls(t *testing.T) {
 		t.Errorf("Unable to find Draft folder")
 		return
 	}
-	sv.AccountCustomFields()
-	_, err = sv.AccountCustomFields()
+
+	_, err = sv.AccountCustomFields(ctx)
 	if err != nil {
 		t.Errorf("AccountCustomFields error: %v", err)
 		return
 	}
 
-	_, err = sv.EnvelopeStatusChanges(StatusChangeToDate(time.Now()), StatusChangeFromDate(time.Now().AddDate(0, 0, -1)),
+	_, err = sv.EnvelopeStatusChanges(ctx, StatusChangeToDate(time.Now()), StatusChangeFromDate(time.Now().AddDate(0, 0, -1)),
 		StatusChangeStatusCode("created"), StatusChangeFromToStatus("created"), StatusChangeCustomField("PID", "123456"))
 	//(time.Now().Add(time.Hour*24*-30)), StatusChangeToDate(time.Now()))
 	if err != nil {
@@ -137,7 +134,7 @@ func TestCalls(t *testing.T) {
 		return
 	}
 
-	_, err = sv.EnvelopeSearch(SearchFolderDrafts, EnvelopeSearchCount(3), EnvelopeSearchFromDate(time.Now().AddDate(0, -1, 0)),
+	_, err = sv.EnvelopeSearch(ctx, SearchFolderDrafts, EnvelopeSearchCount(3), EnvelopeSearchFromDate(time.Now().AddDate(0, -1, 0)),
 		EnvelopeSearchToDate(time.Now()), EnvelopeSearchIncludeRecipients)
 	if err != nil {
 		t.Errorf("EnvelopeSearch error: %v", err)
@@ -157,7 +154,7 @@ func TestCalls(t *testing.T) {
 		Data:        file,
 	}
 
-	ex, err := sv.EnvelopeCreate(testEnv, u)
+	ex, err := sv.EnvelopeCreate(ctx, testEnv, u)
 	if err != nil {
 		t.Errorf("CreateEnvelope: %v", err)
 		return
@@ -205,7 +202,7 @@ func TestCalls(t *testing.T) {
 			},
 		},
 	}
-	aTab, err = sv.RecipientTabsAdd(testEnvId, "1", aTab)
+	aTab, err = sv.RecipientTabsAdd(ctx, testEnvId, "1", aTab)
 	if err != nil {
 		t.Errorf("Add Tabs error: %v", err)
 		return
@@ -215,7 +212,7 @@ func TestCalls(t *testing.T) {
 		deleteTabId = aTab.TextTabs[0].TabId
 	}
 
-	recList, err := sv.Recipients(testEnvId, RecipientsIncludeTabs)
+	recList, err := sv.Recipients(ctx, testEnvId, RecipientsIncludeTabs)
 	if err != nil {
 		t.Errorf("GetRecipients error: %v\n", err)
 		return
@@ -249,7 +246,7 @@ func TestCalls(t *testing.T) {
 		mTabs.ListTabs[0].ListItems[i].Selected = xval
 	}
 	mTabs.ListTabs[0].Value = "Y Val"
-	mTabs, err = sv.RecipientTabsModify(testEnvId, "2", mTabs)
+	mTabs, err = sv.RecipientTabsModify(ctx, testEnvId, "2", mTabs)
 	if err != nil {
 		t.Errorf("Modify Tabs Error: %v", err)
 		return
@@ -268,7 +265,7 @@ func TestCalls(t *testing.T) {
 			},
 		},
 	}
-	rTabs, err = sv.RecipientTabsRemove(testEnvId, "1", rTabs)
+	rTabs, err = sv.RecipientTabsRemove(ctx, testEnvId, "1", rTabs)
 	if err != nil {
 		t.Errorf("Error Deleting Tab: %v", err)
 		return
@@ -307,7 +304,7 @@ func TestCalls(t *testing.T) {
 		},
 	}
 
-	newRecipients, err = sv.RecipientsAdd(testEnvId, newRecipients)
+	newRecipients, err = sv.RecipientsAdd(ctx, testEnvId, newRecipients)
 	if err != nil {
 		t.Errorf("Recipients Add Error: %v", err)
 		return
@@ -318,7 +315,7 @@ func TestCalls(t *testing.T) {
 			newRecipients.Signers[i].Name = "Modified Name"
 		}
 	}
-	modRec, err := sv.RecipientsModify(testEnvId, newRecipients)
+	modRec, err := sv.RecipientsModify(ctx, testEnvId, newRecipients)
 	if err != nil {
 		t.Errorf("Recipients Modify Error: %v", err)
 		return
@@ -331,6 +328,7 @@ func TestCalls(t *testing.T) {
 		return
 	}
 	return
+
 }
 
 func testEnvelopePayload(userName string) *Envelope {
@@ -635,7 +633,6 @@ func TestMultiBody(t *testing.T) {
 		&UploadFile{Data: newReadCloser("XXXX"), ContentType: "text/plain", FileName: "fn3", Id: "3"},
 	}
 	r, ct := multiBody(payload, files)
-
 	defer r.(io.ReadCloser).Close()
 
 	mpr := multipart.NewReader(r, ct[30:])

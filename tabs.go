@@ -100,7 +100,7 @@ type BaseTab struct {
 type BaseTemplateTab struct {
 	RecipientID      string `json:"recipientID,omitempty"`
 	TemplateLocked   DSBool `json:"templateLocked,omitempty"`
-	TemplateRequired DSBool `json:"templaterequired"`
+	TemplateRequired DSBool `json:"templaterequired,omitempty"`
 }
 
 // Conditional value fields
