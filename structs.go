@@ -135,15 +135,16 @@ type ServerTemplate struct {
 }
 
 type InlineTemplate struct {
-	Sequence  string     `json:"sequence,omitempty"`
-	Documents []Document `json:"documents,omitempty"`
+	Sequence   string         `json:"sequence,omitempty"`
+	Documents  []Document     `json:"documents,omitempty"`
+	Recipients *RecipientList `json:"recipients,omitempty"`
 }
 type CompositeTemplate struct {
 	CompositeTemplateId         string           `json:"compositeTemplateId,omitempty"`
 	ServerTemplates             []ServerTemplate `json:"serverTemplates,omitempty"`
 	InlineTemplates             []InlineTemplate `json:"inlineTemplates,omitempty"`
 	PdfMetaDataTemplateSequence string           `json:"pdfMetaDataTemplateSequence,omitempty"`
-	Document                    []Document       `json:"document,omitempty"`
+	Document                    Document         `json:"document,omitempty"`
 }
 
 // https://www.docusign.com/p/RESTAPIGuide/Content/REST%20API%20References/Send%20an%20Envelope.htm
