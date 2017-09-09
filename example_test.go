@@ -17,7 +17,7 @@ func ExampleConfig() {
 		Password:      "YOUR_PASSWORD",
 		IntegratorKey: "YOUR_INTEGRATOR_KEY",
 		AccountId:     "YOUR_ACCOUNT_ID",
-		IsDemoAccount: true,
+		Host:          "YOUR_HOST", // NOTE: set to 'demo.docusign.net' for non-prod tests
 	}
 
 	// create service using config as credential

@@ -27,14 +27,27 @@ import (
 const (
 	Version   = "0.5"
 	userAgent = "docusign-api-go-client/" + Version
-
-//	liveUrl   = "https://www.docusign.net/restapi/v2"
-//	testUrl   = "https://demo.docusign.net/restapi/v2"
 )
 
+/*  Documentation: https://docs.docusign.com/esign/
+
+All REST API endpoints have the following base:
+	https://{server}.docusign.net/restapi/v2
+
+DocuSign hosts multiple geo-dispersed ISO 27001-certified and SSAE 16-audited data centers. For example, account holders in North America might have the following baseUrl:
+	https://na2.docusign.net/restapi/v2/accounts/{accountId}
+Whereas European users might access the following baseUrl:
+	https://eu.docusign.net/restapi/v2/accounts/{accountId}
+
+EXAMPLES
+	"https://www.docusign.net/restapi/v2"  (deprecated?)
+	"https://n2.docusign.net/restapi/v2"   (north america)
+	"https://eu.docusign.net/restapi/v2"   (europe)
+	"https://demo.docusign.net/restapi/v2" (sandbox)
+
+*/
 var (
-	prodURL = &url.URL{Scheme: "https", User: (*url.Userinfo)(nil), Host: "www.docusign.net", Path: "/restapi/v2"}
-	demoURL = &url.URL{Scheme: "https", User: (*url.Userinfo)(nil), Host: "demo.docusign.net", Path: "/restapi/v2"}
+	baseURL = &url.URL{Scheme: "https", User: (*url.Userinfo)(nil), Host: "", Path: "/restapi/v2"}
 )
 
 // DSBool is used to fix problem of capitalized DSBooleans in json. Unmarshals
@@ -46,22 +59,19 @@ func (d *DSBool) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// dsResolveURL resolves a relative url.  If isDemo then the demo site
-// url is used as a base.  The accountID is used to finish the
-// url's path.
-func dsResolveURL(ref *url.URL, isDemo bool, accountID string) {
-	u := prodURL
-	if isDemo {
-		u = demoURL
-	}
-
-	ref.Scheme = u.Scheme
-	ref.Host = u.Host
+// dsResolveURL resolves a relative url.
+// the host parameter determines which docusign server(s) to hit
+//   EX: prod north america, prod europe, demo
+// the accountID is used to finish the url's path.
+func dsResolveURL(ref *url.URL, host string, accountID string) {
+	baseURL.Host = host
+	ref.Scheme = baseURL.Scheme
+	ref.Host = baseURL.Host
 
 	if strings.HasPrefix(ref.Path, "/") {
-		ref.Path = u.Path + ref.Path
+		ref.Path = baseURL.Path + ref.Path
 	} else {
-		ref.Path = u.Path + "/accounts/" + accountID + "/" + ref.Path
+		ref.Path = baseURL.Path + "/accounts/" + accountID + "/" + ref.Path
 	}
 }
 
@@ -79,16 +89,16 @@ type Credential interface {
 type OauthCredential struct {
 	// The docusign account used by the login user.  This may be
 	// found using the LoginInformation call.
-	AccountId     string `json:"account_id,omitempty"`
-	AccessToken   string `json:"access_token,omitempty"`
-	Scope         string `json:"scope,omitempty"`
-	TokenType     string `json:"token_type,omitempty"`
-	IsDemoAccount bool   `json:"isDemo,omitempty"`
+	AccountId   string `json:"account_id,omitempty"`
+	AccessToken string `json:"access_token,omitempty"`
+	Scope       string `json:"scope,omitempty"`
+	TokenType   string `json:"token_type,omitempty"`
+	Host        string `json:"host,omitempty"`
 }
 
 // Authorize update request with authorization parameters
 func (o OauthCredential) Authorize(req *http.Request, onBehalfOf string) {
-	dsResolveURL(req.URL, o.IsDemoAccount, o.AccountId)
+	dsResolveURL(req.URL, o.Host, o.AccountId)
 
 	var auth string
 	if o.TokenType == "" {
@@ -113,7 +123,7 @@ func (o OauthCredential) Revoke(ctx context.Context) error {
 		return err
 	}
 
-	dsResolveURL(req.URL, o.IsDemoAccount, o.AccountId)
+	dsResolveURL(req.URL, o.Host, o.AccountId)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	res, err := ctxhttp.Do(ctx, contextClient(ctx), req)
@@ -124,10 +134,8 @@ func (o OauthCredential) Revoke(ctx context.Context) error {
 	return checkResponseStatus(res)
 }
 
-// Config provides methods to authenticate via a user/password combination.  It may also
-// be used to generate an OauthCredential.  The IsDemoAccount ensures that
-// call will be made to Docusign's demo web server.
-//
+// Config provides methods to authenticate via a user/password combination.
+// It may also be used to generate an OauthCredential.
 // Documentation:  https://www.docusign.com/p/RESTAPIGuide/RESTAPIGuide.htm#SOBO/Send On Behalf Of Functionality in the DocuSign REST API.htm
 type Config struct {
 	// The docusign account used by the login user.  This may be
@@ -136,7 +144,7 @@ type Config struct {
 	IntegratorKey string `json:"key"`
 	UserName      string `json:"user"`
 	Password      string `json:"pwd"`
-	IsDemoAccount bool   `json:"isDemo,omitempty"`
+	Host          string `json:"host,omitempty"`
 }
 
 // OauthCredential retrieves an OauthCredential  from docusign
@@ -155,7 +163,7 @@ func (c *Config) OauthCredential(ctx context.Context) (*OauthCredential, error) 
 	if err != nil {
 		return nil, err
 	}
-	dsResolveURL(req.URL, c.IsDemoAccount, c.AccountId)
+	dsResolveURL(req.URL, c.Host, c.AccountId)
 
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -171,7 +179,7 @@ func (c *Config) OauthCredential(ctx context.Context) (*OauthCredential, error) 
 	}
 	var tk *OauthCredential
 	if err = json.NewDecoder(res.Body).Decode(&tk); err == nil {
-		tk.IsDemoAccount = c.IsDemoAccount
+		tk.Host = c.Host
 		tk.AccountId = c.AccountId
 	}
 	return tk, err
@@ -205,7 +213,7 @@ func (c *Config) OauthCredentialOnBehalfOf(ctx context.Context, oauthCred OauthC
 	}
 	var tk *OauthCredential
 	if err = json.NewDecoder(res.Body).Decode(&tk); err == nil {
-		tk.IsDemoAccount = c.IsDemoAccount
+		tk.Host = c.Host
 		tk.AccountId = c.AccountId
 	}
 	return tk, err
@@ -213,7 +221,7 @@ func (c *Config) OauthCredentialOnBehalfOf(ctx context.Context, oauthCred OauthC
 
 // Authorize adds authorization headers to a rest request using user/password functionality.
 func (c Config) Authorize(req *http.Request, onBehalfOf string) {
-	dsResolveURL(req.URL, c.IsDemoAccount, c.AccountId)
+	dsResolveURL(req.URL, c.Host, c.AccountId)
 	if onBehalfOf != "" {
 		onBehalfOf = "<SendOnBehalfOf>" + onBehalfOf + "</SendOnBehalfOf>"
 	}

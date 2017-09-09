@@ -9,6 +9,7 @@
 
 // You must define an environment variables for the test to run properly.
 // The necessary variables are:
+//  DOCUSIGN_HOST=XXXXXX (set to 'demo.docusign.net' for non-prod testing)
 //	DOCUSIGN_USERNAME=XXXXXXXXXX
 //	DOCUSIGN_PASSWORD=XXXXXXXXXXx
 //	DOCUSIGN_ACCTID=XXXXXX
@@ -56,7 +57,7 @@ func TestCalls(t *testing.T) {
 		Password:      os.Getenv("DOCUSIGN_PASSWORD"),
 		IntegratorKey: os.Getenv("DOCUSIGN_APIKEY"),
 		AccountId:     os.Getenv("DOCUSIGN_ACCTID"),
-		IsDemoAccount: true,
+		Host:          os.Getenv("DOCUSIGN_HOST"),
 	}
 	cfg.UserName = "0ba0d798-49ca-43c3-88dc-840d6bcb37af"
 	cfg.Password = "1DLfrdLa/68U4uzty+pAhM3TUTg="
@@ -69,7 +70,7 @@ func TestCalls(t *testing.T) {
 	var c *OauthCredential
 
 	if testToken > "" {
-		c = &OauthCredential{AccessToken: testToken, AccountId: cfg.AccountId, IsDemoAccount: true}
+		c = &OauthCredential{AccessToken: testToken, AccountId: cfg.AccountId, Host: cfg.Host}
 	} else {
 
 		c, err = cfg.OauthCredential(ctx)
